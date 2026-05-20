@@ -15,33 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const auditLogButton = document.getElementById('audit-log-button');
 
 
-    // --- Firebase Initialization & Emulator Setup (Consistent with app.js) ---
-    try {
-        const hostname = window.location.hostname;
-
-        let authEmulatorUrl = "http://127.0.0.1:9099";
-        let firestoreEmulatorHost = "127.0.0.1";
-        let firestoreEmulatorPort = 8081;
-
-        if (hostname.startsWith('5002-')) {
-            const baseHostname = hostname.substring(5);
-            const authHost = `9099-${baseHostname}`;
-            const firestoreHost = `8081-${baseHostname}`;
-
-            authEmulatorUrl = `https://${authHost}`;
-            firestoreEmulatorHost = firestoreHost;
-            firestoreEmulatorPort = 443;
-        }
-
-        firebase.auth().useEmulator(authEmulatorUrl);
-        firebase.firestore().useEmulator(firestoreEmulatorHost, firestoreEmulatorPort);
-
-    } catch (e) {
-        console.error("Firebaseの初期化またはエミュレータへの接続に失敗しました。", e);
-        alert("アプリケーションの初期化に失敗しました。ページをリロードしてください。");
-        return;
-    }
-
+    // --- Firebase Initialization ---
+    // NOTE: This assumes Firebase is initialized in the HTML file from the CDN.
+    // No emulator code is needed here for the deployed version.
     const db = firebase.firestore();
 
     // --- Authentication State Observer ---
@@ -73,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     adminMenu.classList.remove('hidden');
                 }
             } else {
-                // This case should ideally not happen if backend functions are set up correctly
                 console.warn("Firestoreにユーザーデータが見つかりませんでした。");
                 userDisplayName.innerHTML = `ようこそ、<span class="font-semibold">ゲスト</span>さん`;
             }
@@ -115,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(error => {
             console.error("最近の名刺リストの取得に失敗しました:", error);
             recentCardsListSkeleton.classList.add('hidden');
-            recentCardsList.innerHTML = '<p class="text-red-500">データの取得に失敗しました。</p>
+            recentCardsList.innerHTML = '<p class="text-red-500">データの取得に失敗しました。</p>'; // Removed one >
         });
     }
 
@@ -128,9 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // Navigation button listeners
-    addCardButton.addEventListener('click', () => { window.location.href = 'add-card.html'; });
-    listCardsButton.addEventListener('click', () => { window.location.href = 'list-cards.html'; });
+    // --- CORRECTED Navigation button listeners ---
+    addCardButton.addEventListener('click', () => { window.location.href = 'business_card_form.html'; });
+    listCardsButton.addEventListener('click', () => { window.location.href = 'business_card_list.html'; });
+    
+    // Admin navigation
     userManagementButton.addEventListener('click', () => { window.location.href = 'user-management.html'; });
     auditLogButton.addEventListener('click', () => { window.location.href = 'audit-log.html'; });
 

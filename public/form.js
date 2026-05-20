@@ -64,8 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     notes: document.getElementById('notes').value.trim(),
                 };
 
-                // 【重要】このURLは、後ほどRenderにデプロイしたバックエンドアプリのURLに書き換えます
-                const backendUrl = 'https://bizknot-backend.onrender.com/api/cards';
+                // ★修正点：ハードコードされた誤ったURLを削除し、app.jsで定義された変数を参照するように変更
+                const backendUrl = `${API_BASE_URL}/api/cards`;
 
                 const response = await fetch(backendUrl, {
                     method: 'POST',

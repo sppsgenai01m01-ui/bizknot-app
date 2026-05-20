@@ -4,21 +4,35 @@ const cors = require('cors');
 
 // --- サーバーのセットアップ ---
 const app = express();
-app.use(cors({ origin: true })); // Firebase Hostingからのリクエストを許可
+app.use(cors({ origin: true }));
 app.use(express.json());
 
 // --- Firebase Admin SDKの初期化 ---
-// 【重要】このコードを実行する環境で、サービスアカウントのキーファイルへのパスを
-// GOOGLE_APPLICATION_CREDENTIALS 環境変数に設定するか、以下の様に直接読み込みます。
-// Renderにデプロイする際は、Renderの「Secret File」機能を使ってキーファイルを安全にアップロードします。
-const serviceAccount = require('./serviceAccountKey.json'); // ← あなたが生成したキーファイル名に要変更
+let serviceAccount;
+
+// 【重要】Renderの環境変数からサービスアカウント情報を読み込む
+if (process.env.SERVICE_ACCOUNT_KEY_JSON) {
+  // 環境変数に設定されたJSON文字列をパースして使用
+  serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY_JSON);
+} else {
+  // ローカル開発環境用：ファイルから読み込む
+  // この方法は、ローカルでのテスト時にのみ使用されます。
+  try {
+    serviceAccount = require('./serviceAccountKey.json');
+  } catch (error) {
+    console.error('ローカルのサービスアカウントキーファイル(serviceAccountKey.json)が見つかりませんでした。');
+    console.error('Render環境で実行する場合は、SERVICE_ACCOUNT_KEY_JSON 環境変数を設定してください。');
+    process.exit(1); // サーバーを異常終了させる
+  }
+}
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 const db = admin.firestore();
 
 // --- IDトークンを検証するミドルウェア ---
-asyn_c function verifyToken(req, res, next) {
+async function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).send('Unauthorized: No token provided');

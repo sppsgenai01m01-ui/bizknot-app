@@ -1,0 +1,38 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BizKnot - ログイン</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="text-center">
+        <header>
+            <img src="https://placehold.jp/150x150.png?text=BizKnot" alt="アプリアイコン" class="mx-auto mb-4">
+            <h1 class="text-4xl font-bold">BizKnot</h1>
+            <p class="text-lg text-gray-600">プロジェクト管理システム</p>
+        </header>
+        <main class="mt-8">
+            <button id="login-button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Googleでログイン
+            </button>
+            <p id="error-message" class="text-red-500 mt-4"></p>
+        </main>
+        <footer class="mt-12 text-sm text-gray-500">
+            <a href="#" class="hover:underline">利用規約</a>
+            <span class="mx-2">|</span>
+            <a href="#" class="hover:underline">プライバシーポリシー</a>
+        </footer>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script src="app.js"></script>
+</body>
+</html>

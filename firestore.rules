@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // `business_cards`コレクションへのアクセスルール
+    match /business_cards/{cardId} {
+
+      // READ（get, list）:
+      // 認証済みであり、かつドキュメントのuserIdが自分のUIDと一致する場合のみ許可
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      // CREATE (create):
+      // 認証済みであり、かつ作成しようとしているドキュメントのuserIdが自分のUIDと一致する場合のみ許可
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+
+      // UPDATE (update):
+      // 認証済みであり、かつ更新しようとしているドキュメントのuserIdが自分のUIDと一致する場合のみ許可
+      // 加えて、userIdとcreatedAtの変更は許可しない
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId
+                    && request.resource.data.userId == resource.data.userId
+                    && request.resource.data.createdAt == resource.data.createdAt;
+
+      // DELETE (delete):
+      // 認証済みであり、かつドキュメントのuserIdが自分のUIDと一致する場合のみ許可
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // 他のコレクションへのルールはここに追加する
+
+  }
+}

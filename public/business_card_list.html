@@ -1,0 +1,57 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BizKnot - 名刺一覧</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+
+    <!-- ヘッダー -->
+    <header class="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-20">
+        <h1 class="text-xl font-bold">名刺一覧</h1>
+         <div>
+            <span id="user-name-display" class="mr-4 text-sm"></span>
+            <a href="/dashboard.html" class="text-sm text-gray-600 hover:text-gray-800">ダッシュボード</a>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="p-4 md:p-8">
+        <!-- 検索フォーム -->
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <input type="text" id="search-keyword" placeholder="キーワード (氏名, 会社名...)" class="col-span-1 md:col-span-2 lg:col-span-3 p-2 border rounded-md">
+                <button id="search-button" class="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">検索</button>
+            </div>
+             <!-- TODO: 詳細検索エリア -->
+        </div>
+
+        <!-- 名刺一覧 -->
+        <div id="card-list-container" class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- ここに名刺カードが動的に挿入される -->
+            <!-- スケルトン表示 -->
+            <div class="bg-white rounded-lg shadow p-4 animate-pulse">
+                 <div class="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                 <div class="h-6 bg-gray-300 rounded w-1/2 mb-4"></div>
+                 <div class="h-4 bg-gray-300 rounded w-full"></div>
+            </div>
+        </div>
+
+        <!-- もっと見るボタン -->
+        <div class="text-center mt-8">
+            <button id="load-more-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">もっと見る</button>
+        </div>
+
+    </main>
+
+    <!-- 新規登録FAB -->
+    <a href="/business_card_creation.html" class="fixed bottom-8 right-8 bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-lg z-10">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+    </a>
+
+     <script src="/list.js"></script>
+</body>
+</html>

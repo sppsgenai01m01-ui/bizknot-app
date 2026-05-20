@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>名刺情報 手入力登録 - BizKnot</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>BizKnot</h1>
+        <nav>
+            <a href="dashboard.html">ダッシュボード</a>
+            <a href="business_card_list.html">名刺一覧</a>
+            <a href="settings.html">設定</a>
+            <button id="logout-button">ログアウト</button>
+        </nav>
+    </header>
+
+    <main>
+        <div class="card">
+            <h2>新しい名刺を登録</h2>
+            <p>名刺の情報を手で入力して登録します。</p>
+
+            <div id="message-area"></div>
+
+            <form id="card-form">
+                <fieldset>
+                    <legend>企業・組織情報</legend>
+                    <div class="form-group">
+                        <label for="company">会社名・組織名<span class="required">*</span></label>
+                        <input type="text" id="company" name="company" required placeholder="例）株式会社BizKnot">
+                    </div>
+                    <div class="form-group">
+                        <label for="department">部署名</label>
+                        <input type="text" id="department" name="department" placeholder="例）営業部">
+                    </div>
+                    <div class="form-group">
+                        <label for="title">役職</label>
+                        <input type="text" id="title" name="title" placeholder="例）マネージャー">
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>担当者情報</legend>
+                    <div class="form-group">
+                        <label for="name">氏名<span class="required">*</span></label>
+                        <input type="text" id="name" name="name" required placeholder="例）山田 太郎">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">メールアドレス</label>
+                        <input type="email" id="email" name="email" placeholder="例）yamada.taro@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="tel">電話番号</label>
+                        <input type="tel" id="tel" name="tel" placeholder="例）090-1234-5678">
+                    </div>
+                    <div class="form-group">
+                        <label for="address">住所</label>
+                        <input type="text" id="address" name="address" placeholder="例）東京都千代田区丸の内1-1-1">
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>その他</legend>
+                    <div class="form-group">
+                        <label for="notes">メモ</label>
+                        <textarea id="notes" name="notes" rows="4" placeholder="打ち合わせ日：2023/10/26&#10;特記事項：XXXXの件"></textarea>
+                    </div>
+                </fieldset>
+
+                <div class="form-actions">
+                    <button type="submit" id="submit-button">この内容で登録する</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2023 BizKnot. All rights reserved.</p>
+    </footer>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <!-- App Scripts -->
+    <script src="app.js"></script>
+    <script src="form.js"></script>
+</body>
+</html>

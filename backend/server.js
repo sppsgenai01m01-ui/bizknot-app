@@ -4,7 +4,20 @@ const cors = require('cors');
 
 // --- サーバーのセットアップ ---
 const app = express();
-app.use(cors({ origin: true }));
+
+// --- CORS設定 ---
+// フロントエンドのURLを許可する
+const allowedOrigins = ['https://bizknot-app-frontend.onrender.com'];
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (allowedOrigins.includes(origin) || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // --- Firebase Admin SDKの初期化 ---

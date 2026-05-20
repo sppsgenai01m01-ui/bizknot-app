@@ -1,10 +1,15 @@
 
-// Firebase SDK の初期化
+// --- Backend APIのベースURL ---
+// RenderでデプロイしたバックエンドサービスのURLをここに設定します。
+const API_BASE_URL = 'https://bizknot-app-backend.onrender.com';
+
+// --- Firebase SDK の初期化 ---
+// この設定はFirebaseコンソールから取得したものです。
 const firebaseConfig = {
     apiKey: "AIzaSyDGYmSxCNuf5bpZfQe5e-T0bvUXkU6zXfg",
     authDomain: "bizknot-asever.firebaseapp.com",
     projectId: "bizknot-asever",
-    storageBucket: "bizknot-asever.firebasestorage.app",
+    storageBucket: "bizknot-asever.appspot.com",
     messagingSenderId: "103308146429",
     appId: "1:103308146429:web:474099dc997f0dc85b3094",
     measurementId: "G-HS0D118SW1"
@@ -12,70 +17,95 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
-// 現在のURLが localhost や 127.0.0.1 の場合のみエミュレーターを使用する
+// --- ローカル開発時のエミュレーター設定 ---
+// 公開環境ではここは実行されません。
 if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-    console.log("ローカル環境を検出しました。エミュレータに接続します。");
+    console.log("ローカル環境を検出しました。Firebaseエミュレータに接続します。");
     firebase.auth().useEmulator("http://127.0.0.1:9099");
-    firebase.firestore().useEmulator("127.0.0.1", 8081);
 }
 
 
-// DOM要素の取得
+// --- DOM要素の取得 ---
 const loginButton = document.getElementById('login-button');
 const errorMessage = document.getElementById('error-message');
 
-// ログインボタンのクリックイベント
-loginButton.addEventListener('click', () => {
-    // ボタンをローディング状態にする
-    loginButton.disabled = true;
-    loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 処理中...';
+// --- ログイン処理 ---
+if (loginButton) {
+    loginButton.addEventListener('click', () => {
+        loginButton.disabled = true;
+        loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 処理中...';
 
-    // GoogleAuthProvider のインスタンスを作成
-    const provider = new firebase.auth.GoogleAuthProvider();
+        const provider = new firebase.auth.GoogleAuthProvider();
 
-    // signInWithPopup でログイン
-    firebase.auth().signInWithPopup(provider)
-        .then((result) => {
-            // ログイン成功
-            const user = result.user;
+        firebase.auth().signInWithPopup(provider)
+            .then(result => {
+                // ログイン成功後、すぐにIDトークンを取得
+                return result.user.getIdToken();
+            })
+            .then(idToken => {
+                // IDトークンをセッションストレージに保存
+                sessionStorage.setItem('firebaseIdToken', idToken);
+                // ダッシュボードへリダイレクト
+                window.location.href = 'dashboard.html';
+            })
+            .catch(error => {
+                console.error("ログインまたはトークン取得に失敗しました:", error);
+                errorMessage.textContent = 'ログインに失敗しました。もう一度お試しください。';
+                resetLoginButton();
+            });
+    });
+}
 
-            // Firestoreからユーザー権限を取得
-            const db = firebase.firestore();
-            db.collection('users').doc(user.uid).get()
-                .then((doc) => {
-                    if (doc.exists) {
-                        // ユーザー情報に権限を追加
-                        const permission = doc.data().permission;
-                        // TODO: セッションストレージに保存
+// --- 共通のAPI呼び出し関数 ---
+// バックエンドとの通信を担う重要な関数
+async function callApi(endpoint, method = 'GET', body = null) {
+    const token = sessionStorage.getItem('firebaseIdToken');
+    if (!token) {
+        console.error('IDトークンが見つかりません。ログインページにリダイレクトします。');
+        window.location.href = 'index.html';
+        return;
+    }
 
-                        // ダッシュボードにリダイレクト
-                        window.location.href = 'dashboard.html';
-                    } else {
-                        // ユーザー情報が存在しない場合
-                        errorMessage.textContent = 'ユーザー情報が登録されていません。';
-                        firebase.auth().signOut();
-                        resetLoginButton();
-                    }
-                })
-                .catch((error) => {
-                    // Firestoreからのデータ取得に失敗
-                    console.error('Error getting document:', error);
-                    errorMessage.textContent = 'エラーが発生しました。';
-                    firebase.auth().signOut();
-                    resetLoginButton();
-                });
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
 
-        })
-        .catch((error) => {
-            // ログイン失敗
-            console.error("Login Failed:", error);
-            errorMessage.textContent = 'ログインに失敗しました。';
-            resetLoginButton();
-        });
-});
+    const options = {
+        method: method,
+        headers: headers,
+    };
 
-// ボタンの状態をリセットする関数
+    if (body) {
+        options.body = JSON.stringify(body);
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+        if (!response.ok) {
+            // 4xx, 5xx系エラーの場合
+            const errorData = await response.json();
+            throw new Error(errorData.message || `サーバーエラー: ${response.status}`);
+        }
+        // 204 No Content のようにボディがない場合を考慮
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            return response.json();
+        } else {
+            return; 
+        }
+    } catch (error) {
+        console.error(`API呼び出しエラー (${endpoint}):`, error);
+        // ここでUIにエラーメッセージを表示するなどの処理を追加できる
+        throw error;
+    }
+}
+
+
+// --- ログインボタンの状態をリセットする関数 ---
 function resetLoginButton() {
-    loginButton.disabled = false;
-    loginButton.innerHTML = 'Googleでログイン';
+    if (loginButton) {
+        loginButton.disabled = false;
+        loginButton.innerHTML = 'Googleでログイン';
+    }
 }

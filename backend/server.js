@@ -1,23 +1,20 @@
 const express = require('express');
 const admin = require('firebase-admin');
-const cors = require('cors');
+const cors = require('cors'); // corsパッケージを再度利用します
 
 // --- サーバーのセットアップ ---
 const app = express();
 
 // --- CORS設定 ---
-// フロントエンドのURL（Render）からのリクエストを許可する
-const corsOptions = {
-  origin: 'https://bizknot-app-frontend.onrender.com',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // 許可するHTTPメソッド
-  allowedHeaders: ['Content-Type', 'Authorization'], // 許可するヘッダー
-  optionsSuccessStatus: 200
-};
+// 問題の切り分けのため、一時的にすべてのリクエストを許可する最もシンプルな設定に戻します。
+// これで問題が解決した場合、後ほどセキュリティを強化する設定を再度適用します。
+app.use(cors());
 
-// すべてのルートでCORSを有効化
-app.use(cors(corsOptions));
+// OPTIONSメソッドのプリフライトリクエストに明示的に対応します。
+app.options('* ', cors());
 
 app.use(express.json());
+
 
 // --- Firebase Admin SDKの初期化 ---
 let serviceAccount;

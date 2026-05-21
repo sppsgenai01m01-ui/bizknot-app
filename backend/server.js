@@ -1,6 +1,7 @@
 const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
+const vision = require('@google-cloud/vision');
 
 const app = express();
 
@@ -18,7 +19,8 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+// Increase the limit for JSON bodies to handle base64 images
+app.use(express.json({ limit: '50mb' }));
 
 // --- Firebase Admin SDKの初期化 ---
 let serviceAccount;
@@ -91,10 +93,46 @@ app.post('/api/cards', verifyToken, async (req, res) => {
 
   } catch (error) {
     console.error('Error creating card:', error); // サーバー側のログに詳細を出力
-    // ★修正点：デバッグのため、エラーの詳細をフロントエンドに返す
     res.status(500).send(`Error creating card: ${error.message}`);
   }
 });
+
+// --- OCR API Endpoint ---
+app.post('/api/ocr', verifyToken, async (req, res) => {
+  try {
+    const image = req.body.image;
+    if (!image) {
+      return res.status(400).send('No image provided');
+    }
+
+    // Creates a client
+    const client = new vision.ImageAnnotatorClient();
+
+    // Prepare the request
+    const request = {
+      image: {
+        content: image,
+      },
+      features: [{ type: 'TEXT_DETECTION' }],
+    };
+
+    // Performs text detection on the image file
+    const [result] = await client.textDetection(request);
+    const detections = result.textAnnotations;
+    
+    if (detections && detections.length > 0) {
+      // The first element in textAnnotations is the full detected text
+      const extractedText = detections[0].description;
+      res.status(200).send({ text: extractedText });
+    } else {
+      res.status(200).send({ text: '' }); // No text found
+    }
+  } catch (error) {
+    console.error('Error during OCR processing:', error);
+    res.status(500).send(`Error during OCR processing: ${error.message}`);
+  }
+});
+
 
 // --- サーバーの起動 ---
 const PORT = process.env.PORT || 8080;

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -41,9 +40,19 @@
     <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="text-center text-white">
             <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white mx-auto"></div>
-            <p class="mt-4 text-lg">Vision APIで解析中...</p>
+            <p class="mt-4 text-lg font-bold">AI（Tesseract）で画像を解析中...</p>
+            <p class="mt-2 text-sm text-gray-300">※初回のみ辞書データのダウンロードに少し時間がかかります</p>
         </div>
     </div>
+
+    <!-- Firebase SDK (不足していたものを追加) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
+    <!-- Tesseract.js (安全・完全無料のブラウザOCRライブラリ) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <script src="/creation.js"></script>
 </body>

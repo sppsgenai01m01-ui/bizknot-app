@@ -39,18 +39,17 @@ protectPage((user) => {
         try {
             let query = db.collection('business_cards');
 
-            // ▼▼▼ 検索と並び替えのロジックを修正 ▼▼▼
+            // ▼▼▼ 検索ロジックを 'array-contains' を使うように変更 ▼▼▼
             if (keyword) {
-                // キーワード検索を行う場合、Firestoreの制約により、検索対象のフィールドで最初に並び替える必要がある
-                query = query.where('name', '>=', keyword)
-                             .where('name', '<=', keyword + '\uf8ff')
-                             .orderBy('name', 'asc')
-                             .orderBy('createdAt', 'desc'); // 第二の並び替えキーとして作成日時を指定
+                // 検索キーワードを小文字に変換
+                const lowerCaseKeyword = keyword.toLowerCase();
+                query = query.where('searchKeywords', 'array-contains', lowerCaseKeyword)
+                             .orderBy('createdAt', 'desc'); // 結果は作成日の降順で表示
             } else {
                 // キーワードがない場合は、作成日時の降順で並び替える
                 query = query.orderBy('createdAt', 'desc');
             }
-            // ▲▲▲ 修正ここまで ▲▲▲
+            // ▲▲▲ 変更ここまで ▲▲▲
 
             // ページネーション
             if (lastVisibleDoc && !isInitialLoad) {
@@ -68,7 +67,6 @@ protectPage((user) => {
                 return;
             }
             
-            // スケルトン表示をクリア
             if (isInitialLoad && cardListContainer.querySelector('.animate-pulse')) {
                 cardListContainer.innerHTML = '';
             }
@@ -80,7 +78,6 @@ protectPage((user) => {
 
             lastVisibleDoc = snapshot.docs[snapshot.docs.length - 1];
 
-            // 次のページがあるかどうかを判断
             if(snapshot.docs.length < CARDS_PER_PAGE){
                 loadMoreButton.classList.add('hidden');
             } else {
@@ -90,7 +87,6 @@ protectPage((user) => {
         } catch (error) {
             console.error("Error fetching cards: ", error);
             if (error.code === 'failed-precondition') {
-                // 複合インデックスが必要な場合のエラー
                 cardListContainer.innerHTML = '<p class="col-span-full text-center text-red-500">検索機能の有効化に失敗しました。詳細はブラウザのコンソールを確認し、表示されたリンクからインデックスを作成してください。</p>';
             } else {
                 cardListContainer.innerHTML = '<p class="col-span-full text-center text-red-500">データの読み込みに失敗しました。コンソールを確認してください。</p>';

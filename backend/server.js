@@ -52,6 +52,32 @@ if (serviceAccount) {
 
 const db = admin.firestore();
 
+// --- ▼▼▼ ここから改修 ▼▼▼ ---
+
+// --- 検索キーワードを生成するヘルパー関数 ---
+/**
+ * 文字列から部分一致検索用のキーワード配列を生成する。
+ * @param {...string} texts - キーワードを生成したい文字列（可変長引数）。
+ * @returns {string[]} 重複を除いたキーワードの配列。
+ */
+const generateSearchKeywords = (...texts) => {
+  const keywordSet = new Set();
+  const validTexts = texts.filter(text => typeof text === 'string' && text.length > 0);
+
+  for (const text of validTexts) {
+    const lowerText = text.toLowerCase(); // 検索は小文字に統一
+    for (let i = 0; i < lowerText.length; i++) {
+      for (let j = i + 1; j <= lowerText.length; j++) {
+        keywordSet.add(lowerText.substring(i, j));
+      }
+    }
+  }
+  // 注: この方法はデータ量が多くなるとFirestoreのドキュメントサイズ上限(1MB)に
+  // 達する可能性があるため、本格的な運用ではAlgolia等(プランA)を推奨します。
+  return Array.from(keywordSet);
+};
+
+
 // --- IDトークンを検証するミドルウェア ---
 async function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -74,14 +100,19 @@ app.get('/api/hello', (req, res) => {
   res.status(200).send('Hello from BizKnot Backend!');
 });
 
+// --- 名刺作成API --- 
 app.post('/api/cards', verifyToken, async (req, res) => {
   try {
     const uid = req.user.uid;
     const cardData = req.body;
 
+    // 検索キーワードを生成
+    const searchKeywords = generateSearchKeywords(cardData.name, cardData.company);
+
     const newCard = {
       ...cardData,
       userId: uid,
+      searchKeywords, // 生成したキーワードをドキュメントに追加
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
@@ -90,11 +121,13 @@ app.post('/api/cards', verifyToken, async (req, res) => {
     res.status(201).send({ id: docRef.id, message: 'Card created successfully' });
 
   } catch (error) {
-    console.error('Error creating card:', error); // サーバー側のログに詳細を出力
-    // ★修正点：デバッグのため、エラーの詳細をフロントエンドに返す
+    console.error('Error creating card:', error);
     res.status(500).send(`Error creating card: ${error.message}`);
   }
 });
+
+// --- ▲▲▲ 改修ここまで ▲▲▲ ---
+
 
 // --- サーバーの起動 ---
 const PORT = process.env.PORT || 8080;

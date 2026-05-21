@@ -24,6 +24,7 @@ const fileInput = document.getElementById('file-input');
 const videoElement = document.getElementById('video-element');
 const shutterButton = document.getElementById('shutter-button');
 const loadingOverlay = document.getElementById('loading-overlay');
+const selectFromAlbumLink = document.getElementById('select-from-album-link'); // ★追加
 
 let currentUser;
 
@@ -94,6 +95,12 @@ shutterButton.addEventListener('click', () => {
     canvas.height = videoElement.videoHeight;
     canvas.getContext('2d').drawImage(videoElement, 0, 0, canvas.width, canvas.height);
     canvas.toBlob(handleFile, 'image/jpeg');
+});
+
+// ★追加: アルバムから選択リンクのイベント
+selectFromAlbumLink.addEventListener('click', (e) => {
+    e.preventDefault(); // リンクのデフォルト動作を防ぐ
+    fileInput.click(); // ファイル選択ダイアログを開く
 });
 
 // ファイル処理とバリデーション

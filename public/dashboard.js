@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CORRECTED Navigation button listeners ---
     if (addCardButton) {
         console.log("「名刺登録」ボタンが見つかりました。クリックイベントを設定します。");
-        addCardButton.addEventListener('click', () => { window.location.href = 'business_card_form.html'; });
+        addCardButton.addEventListener('click', () => { window.location.href = 'business_card_creation.html'; });
     } else {
         console.error("致命的エラー: 「名刺登録」ボタン(id='add-card-button')がHTML内に見つかりません。");
     }

@@ -1,0 +1,107 @@
+<!--
+  BizKnot アプリケーション
+  名刺情報 新規作成画面
+-->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BizKnot - Create New</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/creation.css">
+  <!-- Firebase -->
+  <script src="/__/firebase/9.6.1/firebase-app-compat.js"></script>
+  <script src="/__/firebase/9.6.1/firebase-auth-compat.js"></script>
+  <script src="/__/firebase/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="/__/firebase/init.js"></script>
+</head>
+<body>
+
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <header>
+    <h1><a href="list.html">BizKnot</a></h1>
+    <div class="header-menu">
+        <span id="user-email"></span>
+        <button id="logout-button">Logout</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <h1>新しい名刺を登録</h1>
+
+    <!-- OCR機能セクション -->
+    <section id="ocr-section" class="ocr-container">
+      <h2>AIで自動入力 (OCR)</h2>
+      <p>名刺の写真をアップロードすると、テキストを自動で読み取ります。</p>
+      <div class="ocr-controls">
+        <input type="file" id="ocr-file-input" accept="image/*">
+        <button id="ocr-button" class="btn-primary">読み取り実行</button>
+      </div>
+      <div id="ocr-spinner" class="spinner-container" style="display: none;">
+        <div class="spinner"></div>
+        <p>画像解析中...</p>
+      </div>
+    </section>
+
+    <form id="creation-form">
+      <div class="form-group">
+        <label for="company">会社名</label>
+        <input type="text" id="company" required>
+      </div>
+      <div class="form-group">
+        <label for="department">部署</label>
+        <input type="text" id="department">
+      </div>
+      <div class="form-group">
+        <label for="position">役職</label>
+        <input type="text" id="position">
+      </div>
+      <div class="form-group">
+        <label for="name">氏名</label>
+        <input type="text" id="name" required>
+      </div>
+      <div class="form-group">
+        <label for="zip-code">郵便番号</label>
+        <input type="text" id="zip-code">
+      </div>
+      <div class="form-group">
+        <label for="address">住所</label>
+        <input type="text" id="address">
+      </div>
+      <div class="form-group">
+        <label for="tel">電話番号</label>
+        <input type="tel" id="tel">
+      </div>
+      <div class="form-group">
+        <label for="fax">FAX</label>
+        <input type="text" id="fax">
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email">
+      </div>
+      <div class="form-group">
+        <label for="website">Webサイト</label>
+        <input type="url" id="website">
+      </div>
+      <div class="form-group">
+        <label for="notes">メモ</label>
+        <textarea id="notes"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">登録する</button>
+        <a href="list.html" class="btn-secondary">キャンセル</a>
+      </div>
+    </form>
+  </main>
+
+  <script src="js/auth.js"></script>
+  <script src="js/creation.js"></script>
+</body>
+</html>

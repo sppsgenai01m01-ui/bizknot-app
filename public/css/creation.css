@@ -1,0 +1,51 @@
+/**
+ * BizKnot アプリケーション
+ * 名刺新規作成ページ (creation.html) 用スタイル
+ */
+
+/* OCRセクション */
+.ocr-container {
+  background-color: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.ocr-container h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.4rem;
+  color: #333;
+}
+
+.ocr-container p {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #666;
+}
+
+.ocr-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.ocr-controls input[type="file"] {
+  flex-grow: 1;
+}
+
+/* スピナーコンテナ */
+.spinner-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 15px;
+  color: #555;
+}
+
+/* フォーム全体のスタイル調整 */
+.form-group {
+  margin-bottom: 20px; /* 少し余白を広げる */
+}

@@ -20,10 +20,8 @@ const db = firebase.firestore();
 const dropZone = document.getElementById('drop-zone');
 const cameraView = document.getElementById('camera-view');
 const fileSelectButton = document.getElementById('file-select-button');
-const mobileFileSelectButton = document.getElementById('mobile-file-select-button');
+const cameraInput = document.getElementById('camera-input');
 const fileInput = document.getElementById('file-input');
-const videoElement = document.getElementById('video-element');
-const shutterButton = document.getElementById('shutter-button');
 const loadingOverlay = document.getElementById('loading-overlay');
 
 let currentUser;
@@ -44,22 +42,10 @@ function initUI() {
     if (isMobile) {
         dropZone.classList.add('hidden');
         cameraView.classList.remove('hidden');
-        setupCamera();
     } else {
         cameraView.classList.add('hidden');
         dropZone.classList.remove('hidden');
         setupDragAndDrop();
-    }
-}
-
-// カメラのセットアップ
-async function setupCamera() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        videoElement.srcObject = stream;
-    } catch (err) {
-        console.error("Camera Error:", err);
-        alert("カメラの起動に失敗しました。ブラウザの権限を確認してください。");
     }
 }
 
@@ -70,8 +56,10 @@ fileInput.addEventListener('change', (e) => {
     }
 });
 
-if (mobileFileSelectButton) {
-    mobileFileSelectButton.addEventListener('click', () => fileInput.click());
+if (cameraInput) {
+    cameraInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) handleFile(e.target.files[0]);
+    });
 }
 
 // ドラッグ＆ドロップのセットアップ
@@ -94,14 +82,7 @@ function setupDragAndDrop() {
     fileSelectButton.addEventListener('click', () => fileInput.click());
 }
 
-// シャッターボタンのイベント
-shutterButton.addEventListener('click', () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = videoElement.videoWidth;
-    canvas.height = videoElement.videoHeight;
-    canvas.getContext('2d').drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob(handleFile, 'image/jpeg');
-});
+// ネイティブカメラへの移行により独自のシャッター処理は廃止
 
 // ファイル処理とバリデーション
 function handleFile(file) {
@@ -126,10 +107,22 @@ function handleFile(file) {
 async function uploadAndProceed(file) {
     loadingOverlay.classList.remove('hidden');
 
+    let isCompleted = false;
+
+    // 処理全体のタイムアウト（30秒）
+    const timeoutId = setTimeout(() => {
+        if (!isCompleted) {
+            console.warn("Processing timeout occurred.");
+            alert("通信または画像解析に時間がかかりすぎたためタイムアウトしました。\n手動入力画面へ移動します。");
+            window.location.href = '/business_card_form.html';
+        }
+    }, 30000);
+
     try {
         // --- 1. Tesseract.js による OCR 解析 (完全無料・ブラウザ完結) ---
         console.log("OCR解析を開始します...");
         const worker = await Tesseract.createWorker('jpn');
+
         const ret = await worker.recognize(file);
         const extractedText = ret.data.text;
         await worker.terminate();
@@ -193,12 +186,24 @@ async function uploadAndProceed(file) {
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
+        isCompleted = true;
+        clearTimeout(timeoutId);
+
         // 4. 次の画面（フォーム入力画面）にIDを渡して遷移
         window.location.href = `/business_card_form.html?id=${cardId}`;
 
     } catch (error) {
+        isCompleted = true;
+        clearTimeout(timeoutId);
         console.error("Upload/OCR failed:", error);
-        alert("画像の解析またはアップロードに失敗しました。もう一度お試しください。");
-        loadingOverlay.classList.add('hidden');
+        
+        // CORSエラーなどアップロード周りのエラーを分かりやすく通知
+        if (error.message && error.message.includes('CORS')) {
+            alert("Firebase StorageのCORS設定が不足しているためアップロードできません。\nGCPコンソールからCORS設定を行ってください。\n\n手動入力画面へ移動します。");
+            window.location.href = '/business_card_form.html';
+        } else {
+            alert("画像の解析またはアップロードに失敗しました。もう一度お試しください。");
+            loadingOverlay.classList.add('hidden');
+        }
     }
 }

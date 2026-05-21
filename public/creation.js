@@ -103,6 +103,46 @@ function handleFile(file) {
     uploadAndProceed(file);
 }
 
+// 【無課金対応】画像を圧縮してBase64文字列に変換する処理
+function compressImage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = event => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                // Firestoreの容量制限を避けるため最大サイズを800pxに制限
+                const maxSize = 800;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxSize) {
+                        height *= maxSize / width;
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width *= maxSize / height;
+                        height = maxSize;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                // 画質70%でJPEG圧縮しBase64出力（約100KB前後になる）
+                const base64Data = canvas.toDataURL('image/jpeg', 0.7);
+                resolve(base64Data);
+            };
+            img.onerror = error => reject(error);
+        };
+        reader.onerror = error => reject(error);
+    });
+}
+
 // アップロードとOCR処理、画面遷移
 async function uploadAndProceed(file) {
     loadingOverlay.classList.remove('hidden');
@@ -164,11 +204,18 @@ async function uploadAndProceed(file) {
         const newCardRef = db.collection('businessCards').doc();
         const cardId = newCardRef.id;
 
-        // 画像のアップロード
+        // 【将来の課題】デモ完了後にStorageへ移行するため、元のコードはコメントアウトして残しておく
+        // 画像のアップロード (現在は課金制約のためFirestoreへ直接Base64で保存する)
+        /*
         const filePath = `uploads/${currentUser.uid}/${cardId}/${file.name}`;
         const storageRef = storage.ref(filePath);
         await storageRef.put(file);
         const imageUrl = await storageRef.getDownloadURL();
+        */
+        
+        // 代替処理: Canvasで圧縮してBase64文字列に変換
+        const compressedBase64 = await compressImage(file);
+        const imageUrl = compressedBase64; // URLの代わりにBase64文字列をそのまま使用
 
         // FirestoreにOCRの推測結果を含めて保存
         await newCardRef.set({

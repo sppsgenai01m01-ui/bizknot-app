@@ -1,7 +1,11 @@
 const express = require('express');
 const admin = require('firebase-admin');
+const path = require('path');
 
 const app = express();
+
+// --- Static File Serving ---
+app.use(express.static(path.join(__dirname, '../public')));
 
 // --- CORSヘッダーの手動設定 --- 
 app.use((req, res, next) => {

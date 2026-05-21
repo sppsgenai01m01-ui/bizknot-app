@@ -2,10 +2,11 @@
 .firebase/hosting.*.cache
 firebase-debug.log
 
+# Backend
+backend/node_modules/
+backend/serviceAccountKey.json
+
 # General
 .DS_Store
 .vscode/
 node_modules/
-
-# Backend (if any, good to keep)
-backend/node_modules/

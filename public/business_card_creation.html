@@ -27,10 +27,13 @@
         </div>
 
         <!-- スマホ向け: カメラ -->
-        <div id="camera-view" class="md:hidden w-full max-w-md">
+        <div id="camera-view" class="md:hidden w-full max-w-md flex flex-col items-center">
             <video id="video-element" class="w-full rounded-lg shadow-md" autoplay playsinline></video>
             <button id="shutter-button" class="mt-4 w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-xl">撮影</button>
-            <a href="#" id="select-from-album-link" class="mt-4 text-sm text-blue-600 hover:underline">またはアルバム/フォルダから選択</a>
+            <div class="mt-4 text-center">
+                <p class="text-sm text-gray-500 mb-2">または</p>
+                <button id="mobile-file-select-button" class="text-blue-500 hover:text-blue-700 font-medium cursor-pointer">アルバム/フォルダから選択</button>
+            </div>
         </div>
 
          <p class="mt-4 text-sm text-gray-500">.jpeg, .jpg, .png (最大5MB)</p>

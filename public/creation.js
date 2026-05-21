@@ -20,11 +20,11 @@ const db = firebase.firestore();
 const dropZone = document.getElementById('drop-zone');
 const cameraView = document.getElementById('camera-view');
 const fileSelectButton = document.getElementById('file-select-button');
+const mobileFileSelectButton = document.getElementById('mobile-file-select-button');
 const fileInput = document.getElementById('file-input');
 const videoElement = document.getElementById('video-element');
 const shutterButton = document.getElementById('shutter-button');
 const loadingOverlay = document.getElementById('loading-overlay');
-const selectFromAlbumLink = document.getElementById('select-from-album-link'); // ★追加
 
 let currentUser;
 
@@ -63,6 +63,17 @@ async function setupCamera() {
     }
 }
 
+// グローバルなイベントリスナーの登録（PC/スマホ共通）
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+    }
+});
+
+if (mobileFileSelectButton) {
+    mobileFileSelectButton.addEventListener('click', () => fileInput.click());
+}
+
 // ドラッグ＆ドロップのセットアップ
 function setupDragAndDrop() {
     dropZone.addEventListener('dragover', (e) => {
@@ -81,11 +92,6 @@ function setupDragAndDrop() {
         }
     });
     fileSelectButton.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFile(e.target.files[0]);
-        }
-    });
 }
 
 // シャッターボタンのイベント
@@ -95,12 +101,6 @@ shutterButton.addEventListener('click', () => {
     canvas.height = videoElement.videoHeight;
     canvas.getContext('2d').drawImage(videoElement, 0, 0, canvas.width, canvas.height);
     canvas.toBlob(handleFile, 'image/jpeg');
-});
-
-// ★追加: アルバムから選択リンクのイベント
-selectFromAlbumLink.addEventListener('click', (e) => {
-    e.preventDefault(); // リンクのデフォルト動作を防ぐ
-    fileInput.click(); // ファイル選択ダイアログを開く
 });
 
 // ファイル処理とバリデーション

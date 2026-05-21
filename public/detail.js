@@ -38,21 +38,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (doc.exists) {
                 const data = doc.data();
-                renderCardDetails(data);
-                showLoading(false);
+                // isDeletedフラグをチェック
+                if (data.isDeleted) {
+                    showError('この名刺は削除されています。');
+                    deleteButton.classList.add('hidden'); // 削除済みならボタンを隠す
+                } else {
+                    renderCardDetails(data);
+                }
             } else {
                 showError('該当する名刺データが見つかりませんでした。');
             }
         } catch (error) {
             console.error("Error fetching document: ", error);
             showError('データの取得中にエラーが発生しました。');
+        } finally {
+            showLoading(false);
         }
     };
 
     // 取得したデータをHTMLにレンダリング
     const renderCardDetails = (data) => {
         // 安全な値の表示（XSS対策）
-        const escapeHTML = (str) => str ? str.replace(/[&<>"]/g, (tag) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[tag])) : '';
+        const escapeHTML = (str) => str ? str.replace(/[&<>"']/g, (tag) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[tag])) : '';
 
         cardDetailContainer.innerHTML = `
             <div class="p-6">
@@ -94,17 +101,21 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     };
 
-    // 削除ボタンの処理
+    // 削除ボタンの処理（論理削除へ変更）
     deleteButton.addEventListener('click', async () => {
         if (!cardId) return;
 
-        if (confirm('この名刺を本当に削除しますか？この操作は元に戻せません。')) {
+        if (confirm('この名刺を削除しますか？')) {
             try {
-                await db.collection('business_cards').doc(cardId).delete();
+                const docRef = db.collection('business_cards').doc(cardId);
+                await docRef.update({
+                    isDeleted: true,
+                    deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
                 alert('名刺を削除しました。');
-                window.location.href = 'business_card_list.html'; // 一覧ページにリダイレクト
+                window.location.href = 'list.html'; // 一覧ページにリダイレクト
             } catch (error) {
-                console.error("Error deleting document: ", error);
+                console.error("Error updating document: ", error);
                 alert('削除中にエラーが発生しました。');
             }
         }
@@ -117,7 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showError = (message) => {
-        loadingIndicator.classList.add('hidden');
+        showLoading(false);
+        cardDetailContainer.innerHTML = ''; // コンテンツをクリア
         errorMessage.querySelector('p').textContent = message;
         errorMessage.classList.remove('hidden');
         deleteButton.classList.add('hidden');

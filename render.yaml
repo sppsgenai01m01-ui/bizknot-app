@@ -1,0 +1,26 @@
+# Render aplication deployment file
+# See https://render.com/docs/yaml-spec for reference
+
+services:
+  # Frontend: 静的サイト
+  - type: web
+    name: bizknot-frontend
+    env: static
+    # 静的コンテンツのルートディレクトリ
+    staticPublishPath: ./public
+    # ルートへのリクエストをindex.htmlにリダイレクト
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Backend: Node.js サーバー
+  - type: web
+    name: bizknot-backend
+    env: node
+    # サーバーのルートディレクトリ
+    rootDir: ./backend
+    # ビルドコマンド
+    buildCommand: "npm install"
+    # 起動コマンド
+    startCommand: "npm start"

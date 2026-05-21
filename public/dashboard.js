@@ -1,4 +1,8 @@
+console.log("【最終確認】dashboard.jsは、確かに読み込まれました。");
+
 document.addEventListener('DOMContentLoaded', () => {
+
+    console.log("DOMContentLoadedイベントが発火しました。イベントリスナーを設定します。");
 
     // --- DOM Elements ---
     const userDisplayName = document.getElementById('user-display-name');
@@ -14,21 +18,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const userManagementButton = document.getElementById('user-management-button');
     const auditLogButton = document.getElementById('audit-log-button');
 
-
     // --- Firebase Initialization ---
     // NOTE: This assumes Firebase is initialized in the HTML file from the CDN.
-    // No emulator code is needed here for the deployed version.
     const db = firebase.firestore();
 
     // --- Authentication State Observer ---
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
-            // User is signed in. Let's fetch their data.
             console.log("ログイン済みのユーザーです: ", user.uid);
             fetchUserData(user);
             fetchDashboardData();
         } else {
-            // No user is signed in. Redirect to login page.
             console.log("未ログインのユーザーです。ログインページにリダイレクトします。");
             window.location.href = 'index.html';
         }
@@ -40,10 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userRef.get().then(doc => {
             if (doc.exists) {
                 const userData = doc.data();
-                // Display user's name
                 userDisplayName.innerHTML = `ようこそ、<span class="font-semibold">${userData.displayName || 'ユーザー'}</span>さん`;
-                
-                // Show admin menu based on permission
                 if (userData.permission === 'admin') {
                     console.log("管理者権限を検出しました。管理者メニューを表示します。");
                     adminMenu.classList.remove('hidden');
@@ -58,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function fetchDashboardData() {
-        // 1. Fetch summary count
         db.collection('businessCards').get().then(snapshot => {
             summaryCardCount.textContent = snapshot.size;
         }).catch(error => {
@@ -66,9 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryCardCount.textContent = 'N/A';
         });
 
-        // 2. Fetch recent cards
         db.collection('businessCards').orderBy('createdAt', 'desc').limit(5).get().then(snapshot => {
-            recentCardsList.innerHTML = ''; // Clear the list
+            recentCardsList.innerHTML = '';
             if (snapshot.empty) {
                 recentCardsList.innerHTML = '<p class="text-gray-500">まだ名刺は登録されていません。</p>';
             } else {
@@ -80,20 +75,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="font-semibold text-gray-800">${card.companyName || '会社名未登録'}</p>
                         <p class="text-sm text-gray-600">${card.personName || '氏名未登録'}</p>
                     `;
-                    li.dataset.id = doc.id; // Store document id for click events
+                    li.dataset.id = doc.id;
                     recentCardsList.appendChild(li);
                 });
             }
-            // Hide skeleton and show the list
             recentCardsListSkeleton.classList.add('hidden');
             recentCardsList.classList.remove('hidden');
         }).catch(error => {
             console.error("最近の名刺リストの取得に失敗しました:", error);
             recentCardsListSkeleton.classList.add('hidden');
-            recentCardsList.innerHTML = '<p class="text-red-500">データの取得に失敗しました。</p>'; // Removed one >
+            recentCardsList.innerHTML = '<p class="text-red-500">データの取得に失敗しました。</p>';
         });
     }
-
 
     // --- Event Listeners ---
     logoutButton.addEventListener('click', () => {
@@ -104,11 +97,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // --- CORRECTED Navigation button listeners ---
-    addCardButton.addEventListener('click', () => { window.location.href = 'business_card_form.html'; });
-    listCardsButton.addEventListener('click', () => { window.location.href = 'business_card_list.html'; });
+    if (addCardButton) {
+        console.log("「名刺登録」ボタンが見つかりました。クリックイベントを設定します。");
+        addCardButton.addEventListener('click', () => { window.location.href = 'business_card_form.html'; });
+    } else {
+        console.error("致命的エラー: 「名刺登録」ボタン(id='add-card-button')がHTML内に見つかりません。");
+    }
+
+    if (listCardsButton) {
+        console.log("「名刺一覧」ボタンが見つかりました。クリックイベントを設定します。");
+        listCardsButton.addEventListener('click', () => { window.location.href = 'business_card_list.html'; });
+    } else {
+        console.error("エラー: 「名刺一覧」ボタン(id='list-cards-button')がHTML内に見つかりません。");
+    }
     
     // Admin navigation
-    userManagementButton.addEventListener('click', () => { window.location.href = 'user-management.html'; });
-    auditLogButton.addEventListener('click', () => { window.location.href = 'audit-log.html'; });
+    if(userManagementButton) userManagementButton.addEventListener('click', () => { window.location.href = 'user-management.html'; });
+    if(auditLogButton) auditLogButton.addEventListener('click', () => { window.location.href = 'audit-log.html'; });
 
 });

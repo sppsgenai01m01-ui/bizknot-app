@@ -20,11 +20,21 @@
     <main>
         <div class="card">
             <h2>新しい名刺を登録</h2>
-            <p>名刺の情報を手で入力して登録します。</p>
+            <p>名刺の情報を入力して登録します。</p>
 
             <div id="message-area"></div>
 
             <form id="card-form">
+                <fieldset>
+                    <legend>OCRによる自動入力</legend>
+                    <div class="form-group">
+                        <label for="card-image">名刺画像</label>
+                        <input type="file" id="card-image" accept="image/*">
+                        <button type="button" id="ocr-button" class="submit-button-style">画像から情報を読み取る</button>
+                        <div id="ocr-status" style="display: none;">読み取り中...</div>
+                    </div>
+                </fieldset>
+
                 <fieldset>
                     <legend>企業・組織情報</legend>
                     <div class="form-group">

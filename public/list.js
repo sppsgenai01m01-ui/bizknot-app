@@ -37,38 +37,44 @@ protectPage((user) => {
         showLoading(true);
 
         try {
-            let query = db.collection('business_cards')
-                        .orderBy('createdAt', 'desc')
-                        .limit(CARDS_PER_PAGE);
+            let query = db.collection('business_cards');
 
-            // キーワード検索（前方一致）
+            // ▼▼▼ 検索と並び替えのロジックを修正 ▼▼▼
             if (keyword) {
-                // 注: Firestoreのネイティブ機能では部分一致検索は効率的ではないため、
-                // ここでは'name'と'company'の前方一致のみを簡易的に実装します。
-                // より高度な検索にはAlgolia等の専門サービスが必要です。
-                query = query.where('name', '>=', keyword).where('name', '<=', keyword + '\uf8ff');
-                // 必要であれば会社名も検索対象に加えるなどの拡張が可能
+                // キーワード検索を行う場合、Firestoreの制約により、検索対象のフィールドで最初に並び替える必要がある
+                query = query.where('name', '>=', keyword)
+                             .where('name', '<=', keyword + '\uf8ff')
+                             .orderBy('name', 'asc')
+                             .orderBy('createdAt', 'desc'); // 第二の並び替えキーとして作成日時を指定
+            } else {
+                // キーワードがない場合は、作成日時の降順で並び替える
+                query = query.orderBy('createdAt', 'desc');
             }
-            
+            // ▲▲▲ 修正ここまで ▲▲▲
+
             // ページネーション
             if (lastVisibleDoc && !isInitialLoad) {
                 query = query.startAfter(lastVisibleDoc);
             }
+            
+            query = query.limit(CARDS_PER_PAGE);
 
             const snapshot = await query.get();
 
             if (snapshot.empty && isInitialLoad) {
-                cardListContainer.innerHTML = '<p class="col-span-full text-center text-gray-500">名刺はまだ登録されていません。</p>';
+                cardListContainer.innerHTML = '<p class="col-span-full text-center text-gray-500">該当する名刺は見つかりませんでした。</p>';
                 loadMoreButton.classList.add('hidden');
+                showLoading(false);
                 return;
             }
             
+            // スケルトン表示をクリア
+            if (isInitialLoad && cardListContainer.querySelector('.animate-pulse')) {
+                cardListContainer.innerHTML = '';
+            }
+
             snapshot.forEach(doc => {
                 const cardElement = createCardElement(doc.id, doc.data());
-                // スケルトン表示を置換
-                if (isInitialLoad && cardListContainer.querySelector('.animate-pulse')) {
-                    cardListContainer.innerHTML = '';
-                }
                 cardListContainer.appendChild(cardElement);
             });
 
@@ -83,7 +89,12 @@ protectPage((user) => {
 
         } catch (error) {
             console.error("Error fetching cards: ", error);
-            cardListContainer.innerHTML = '<p class="col-span-full text-center text-red-500">データの読み込みに失敗しました。コンソールを確認してください。</p>';
+            if (error.code === 'failed-precondition') {
+                // 複合インデックスが必要な場合のエラー
+                cardListContainer.innerHTML = '<p class="col-span-full text-center text-red-500">検索機能の有効化に失敗しました。詳細はブラウザのコンソールを確認し、表示されたリンクからインデックスを作成してください。</p>';
+            } else {
+                cardListContainer.innerHTML = '<p class="col-span-full text-center text-red-500">データの読み込みに失敗しました。コンソールを確認してください。</p>';
+            }
         } finally {
             showLoading(false);
         }
@@ -91,9 +102,6 @@ protectPage((user) => {
 
     /**
      * 名刺カードのHTML要素を作成する
-     * @param {string} id - ドキュメントID
-     * @param {object} data - 名刺データ
-     * @returns {HTMLElement} aタグで囲まれたカード要素
      */
     function createCardElement(id, data) {
         const cardLink = document.createElement('a');
@@ -111,7 +119,6 @@ protectPage((user) => {
 
     /**
      * 読み込みボタンの状態を更新する
-     * @param {boolean} isLoading - 読み込み中かどうか
      */
     function showLoading(isLoading) {
         if (isLoading) {
@@ -125,13 +132,11 @@ protectPage((user) => {
 
     // --- イベントリスナー --- 
 
-    // 検索ボタン
     searchButton.addEventListener('click', () => {
         currentKeyword = searchKeyword.value;
         fetchCards(true, currentKeyword);
     });
     
-    // Enterキーでの検索
     searchKeyword.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
             currentKeyword = searchKeyword.value;
@@ -139,7 +144,6 @@ protectPage((user) => {
         }
     });
 
-    // もっと見るボタン
     loadMoreButton.addEventListener('click', () => {
         fetchCards(false, currentKeyword);
     });

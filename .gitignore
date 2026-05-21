@@ -1,6 +1,11 @@
-# Firebase Service Account Key
-backend/serviceAccountKey.json
+# Firebase
+.firebase/hosting.*.cache
+firebase-debug.log
 
-# Node.js dependencies
-backend/node_modules
-node_modules
+# General
+.DS_Store
+.vscode/
+node_modules/
+
+# Backend (if any, good to keep)
+backend/node_modules/

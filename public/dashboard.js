@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     li.className = 'p-3 hover:bg-gray-100 rounded-md cursor-pointer border-b';
                     li.innerHTML = `
                         <p class="font-semibold text-gray-800">${card.companyName || '会社名未登録'}</p>
-                        <p class="text-sm text-gray-600">${card.personName || '氏名未登録'}</p>
+                        <p class="text-sm text-gray-600">${card.name || '氏名未登録'}</p>
                     `;
                     li.dataset.id = doc.id;
                     recentCardsList.appendChild(li);

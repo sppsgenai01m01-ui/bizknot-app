@@ -22,13 +22,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
             auth.signInWithPopup(provider)
                 .then(result => {
+                    const user = result.user;
+                    const email = user.email;
+                    
+                    // 許可するドメインのリスト
+                    const ALLOWED_DOMAINS = ['spps.co.jp'];
+                    const userDomain = email.split('@')[1];
+                    
+                    if (!ALLOWED_DOMAINS.includes(userDomain)) {
+                        auth.signOut().then(() => {
+                            if (errorMessage) {
+                                errorMessage.textContent = `エラー：許可されていないドメイン（@${userDomain}）です。社内アカウントを使用してください。`;
+                                errorMessage.className = 'bg-red-100 text-red-700 p-3 rounded mb-4 font-bold';
+                            }
+                            resetLoginButton();
+                        });
+                        return;
+                    }
+
                     // ログイン成功後、ダッシュボードへリダイレクト
                     window.location.href = 'dashboard.html';
                 })
                 .catch(error => {
                     console.error("ログインに失敗しました:", error);
                     if (errorMessage) {
-                        errorMessage.textContent = 'ログインに失敗しました。ポップアップがブロックされていないか確認し、もう一度お試しください。';
+                        errorMessage.textContent = 'ログインに失敗しました。もう一度お試しください。';
+                        errorMessage.className = 'bg-red-100 text-red-700 p-3 rounded mb-4 font-bold';
                     }
                     resetLoginButton();
                 });

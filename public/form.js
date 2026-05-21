@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     notes: document.getElementById('notes').value.trim(),
                 };
 
-                // ★修正点：ハードコードされた誤ったURLを削除し、app.jsで定義された変数を参照するように変更
+                // src/firebase-config.js で定義されたグローバル変数 を参照
                 const backendUrl = `${API_BASE_URL}/api/cards`;
 
                 const response = await fetch(backendUrl, {

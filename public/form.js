@@ -15,16 +15,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentUser = null;
     let cardId = new URLSearchParams(window.location.search).get('id');
+    let customFieldsDef = []; // カスタム項目の定義を保持
 
     let draftData = null;
 
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
-            if (cardId) {
-                // 編集モード：Firestoreからデータを取得
-                loadCardData(cardId);
-            } else {
+            loadCustomFields().then(() => {
+                if (cardId) {
+                    // 編集モード：Firestoreからデータを取得
+                    loadCardData(cardId);
+                } else {
                 // 新規登録モード：SessionStorageにOCR結果があれば読み込む
                 const draftString = sessionStorage.getItem('ocrDraft');
                 if (draftString) {
@@ -34,8 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch (e) {
                         console.error("SessionStorageのパースに失敗しました", e);
                     }
+                    }
                 }
-            }
+            });
         } else {
             window.location.href = 'index.html';
         }
@@ -50,6 +53,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = '/dashboard.html';
             }
         });
+    }
+
+    // カスタム項目定義の読み込みとフォーム生成
+    async function loadCustomFields() {
+        try {
+            const snapshot = await db.collection('customFields').orderBy('label').get();
+            if (!snapshot.empty) {
+                const container = document.getElementById('custom-fields-container');
+                const wrapper = document.getElementById('custom-fields-wrapper');
+                
+                snapshot.forEach(doc => {
+                    const field = doc.data();
+                    customFieldsDef.push({ id: doc.id, ...field });
+                    
+                    const div = document.createElement('div');
+                    div.className = 'form-group';
+                    
+                    const requiredHtml = field.isRequired ? '<span class="required">*</span>' : '';
+                    const inputRequired = field.isRequired ? 'required' : '';
+                    
+                    let inputHtml = '';
+                    if (field.type === 'textarea') {
+                        inputHtml = `<textarea id="custom_${field.key}" name="custom_${field.key}" rows="3" ${inputRequired}></textarea>`;
+                    } else if (field.type === 'number') {
+                        inputHtml = `<input type="number" id="custom_${field.key}" name="custom_${field.key}" ${inputRequired}>`;
+                    } else if (field.type === 'date') {
+                        inputHtml = `<input type="date" id="custom_${field.key}" name="custom_${field.key}" ${inputRequired}>`;
+                    } else {
+                        inputHtml = `<input type="text" id="custom_${field.key}" name="custom_${field.key}" ${inputRequired}>`;
+                    }
+
+                    div.innerHTML = `
+                        <label for="custom_${field.key}">${field.label}${requiredHtml}</label>
+                        ${inputHtml}
+                    `;
+                    wrapper.appendChild(div);
+                });
+                
+                if (customFieldsDef.length > 0) {
+                    container.classList.remove('hidden');
+                }
+            }
+        } catch (error) {
+            console.error("カスタム項目の読み込みエラー:", error);
+        }
     }
 
     // OCR推測データをフォームにセットする関数
@@ -112,6 +160,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 setVal('address', data.address);
                 setVal('notes', data.memo);
 
+                // カスタム項目のセット
+                if (data.customData) {
+                    for (const key in data.customData) {
+                        setVal(`custom_${key}`, data.customData[key]);
+                    }
+                }
+
             } else {
                 console.error("名刺データが見つかりません:", id);
             }
@@ -148,8 +203,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 fax: document.getElementById('fax') ? document.getElementById('fax').value.trim() : "",
                 address: document.getElementById('address') ? document.getElementById('address').value.trim() : "",
                 memo: document.getElementById('notes') ? document.getElementById('notes').value.trim() : "",
+                customData: {},
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
+
+            // カスタム項目の収集
+            customFieldsDef.forEach(field => {
+                const el = document.getElementById(`custom_${field.key}`);
+                if (el) {
+                    cardData.customData[field.key] = el.value.trim();
+                }
+            });
 
                 try {
                     let savedCardId = cardId;
@@ -169,12 +233,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         sessionStorage.removeItem('ocrDraft');
                     }
 
-                messageArea.textContent = '名刺情報を保存しました！完了画面へ移動します。';
-                messageArea.className = 'text-green-600 mb-4 font-bold';
-
-                setTimeout(() => {
-                    window.location.href = `/business_card_registered.html?id=${savedCardId}`;
-                }, 1000);
+                if (cardId) {
+                    messageArea.textContent = '名刺情報を更新しました！';
+                    messageArea.className = 'text-green-600 mb-4 font-bold';
+                    submitButton.disabled = false;
+                    // メッセージを3秒後に消去し、画面遷移は行わない
+                    setTimeout(() => {
+                        messageArea.textContent = '';
+                    }, 3000);
+                } else {
+                    messageArea.textContent = '名刺情報を保存しました！完了画面へ移動します。';
+                    messageArea.className = 'text-green-600 mb-4 font-bold';
+                    setTimeout(() => {
+                        window.location.href = `/business_card_registered.html?id=${savedCardId}`;
+                    }, 1000);
+                }
 
             } catch (error) {
                 console.error('Error saving document: ', error);

@@ -56,19 +56,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fetchDashboardData() {
         db.collection('businessCards').get().then(snapshot => {
-            summaryCardCount.textContent = snapshot.size;
+            let count = 0;
+            snapshot.forEach(doc => {
+                if (!doc.data().deletedAt) count++;
+            });
+            summaryCardCount.textContent = count;
         }).catch(error => {
             console.error("名刺総数の取得に失敗しました:", error);
             summaryCardCount.textContent = 'N/A';
         });
 
-        db.collection('businessCards').orderBy('createdAt', 'desc').limit(5).get().then(snapshot => {
+        // 論理削除をフィルタリングするため多めに取得
+        db.collection('businessCards').orderBy('createdAt', 'desc').limit(20).get().then(snapshot => {
             recentCardsList.innerHTML = '';
             if (snapshot.empty) {
                 recentCardsList.innerHTML = '<p class="text-gray-500">まだ名刺は登録されていません。</p>';
             } else {
+                let displayedCount = 0;
                 snapshot.forEach(doc => {
                     const card = doc.data();
+                    if (card.deletedAt) return; // 論理削除スキップ
+                    if (displayedCount >= 5) return; // 5件まで
+                    displayedCount++;
+
                     const li = document.createElement('li');
                     li.className = 'p-3 hover:bg-gray-100 rounded-md cursor-pointer border-b transition duration-150 ease-in-out';
                     li.innerHTML = `
@@ -86,6 +96,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     recentCardsList.appendChild(li);
                 });
+                
+                if (displayedCount === 0) {
+                    recentCardsList.innerHTML = '<p class="text-gray-500">まだ名刺は登録されていません。</p>';
+                }
             }
             recentCardsListSkeleton.classList.add('hidden');
             recentCardsList.classList.remove('hidden');

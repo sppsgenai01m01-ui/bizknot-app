@@ -53,7 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             allCards = [];
             snapshot.forEach(doc => {
-                allCards.push({ id: doc.id, ...doc.data() });
+                if (!doc.data().deletedAt) {
+                    allCards.push({ id: doc.id, ...doc.data() });
+                }
             });
 
             renderCards(allCards);

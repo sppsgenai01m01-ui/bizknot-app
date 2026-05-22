@@ -1,17 +1,4 @@
-// Firebase SDK の初期化
-const firebaseConfig = {
-    apiKey: "AIzaSyDGYmSxCNuf5bpZfQe5e-T0bvUXkU6zXfg",
-    authDomain: "bizknot-asever.firebaseapp.com",
-    projectId: "bizknot-asever",
-    storageBucket: "bizknot-asever.firebasestorage.app",
-    messagingSenderId: "103308146429",
-    appId: "1:103308146429:web:474099dc997f0dc85b3094"
-};
-
-// 念のため二重初期化を防ぐ処理
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+// app.jsでFirebase SDKは初期化済みのため、ここでは変数定義のみ行う
 const auth = firebase.auth();
 const storage = firebase.storage();
 const db = firebase.firestore();
@@ -80,6 +67,12 @@ function setupDragAndDrop() {
         }
     });
     fileSelectButton.addEventListener('click', () => fileInput.click());
+    
+    // スマホ版のファイル選択ボタン
+    const mobileFileSelectButton = document.getElementById('mobile-file-select-button');
+    if (mobileFileSelectButton) {
+        mobileFileSelectButton.addEventListener('click', () => fileInput.click());
+    }
 }
 
 // ネイティブカメラへの移行により独自のシャッター処理は廃止

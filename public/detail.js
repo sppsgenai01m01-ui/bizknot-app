@@ -22,6 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const customFieldsListDisplay = document.getElementById('custom-fields-list-display');
     const editButton = document.getElementById('edit-button');
     const deleteButton = document.getElementById('delete-button');
+    const historyButton = document.getElementById('history-button'); // 追加
+
+    // 未実装の更新履歴ボタンは一旦非表示
+    if (historyButton) historyButton.style.display = 'none';
 
     let currentUser = null;
     let userPermission = 'user';

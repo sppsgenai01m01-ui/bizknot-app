@@ -45,8 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!fieldId) return;
 
                 if (target.classList.contains('edit-field-button')) {
-                    // Edit modal logic (placeholder)
-                    alert('編集機能は準備中です: ' + fieldId);
+                    editCustomField(fieldId);
                 }
                 if (target.classList.contains('delete-field-button')) {
                     deleteCustomField(fieldId);
@@ -102,6 +101,27 @@ document.addEventListener('DOMContentLoaded', () => {
         fieldIsRequired.checked = false;
         fieldKey.disabled = false; 
         addFieldModal.classList.remove('hidden');
+    }
+
+    async function editCustomField(id) {
+        try {
+            const doc = await db.collection('customFields').doc(id).get();
+            if (doc.exists) {
+                const data = doc.data();
+                fieldModalTitle.textContent = 'カスタム項目の編集';
+                editFieldId.value = id;
+                fieldLabel.value = data.label;
+                fieldKey.value = data.key;
+                fieldType.value = data.type;
+                fieldIsRequired.checked = data.isRequired;
+                // キーは変更不可にする（既存データとの整合性維持のため）
+                fieldKey.disabled = true;
+                addFieldModal.classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error("Error fetching custom field: ", error);
+            alert("データの取得に失敗しました。");
+        }
     }
 
     async function saveCustomField() {

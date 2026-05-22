@@ -41,8 +41,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
 
-                    // ログイン成功後、ダッシュボードへリダイレクト
-                    window.location.href = 'dashboard.html';
+                    // 監査ログの記録 (app.js の addAuditLog がない可能性があるため直接書き込み)
+                    firebase.firestore().collection('auditLogs').add({
+                        userId: user.uid,
+                        userEmail: user.email,
+                        action: 'LOGIN',
+                        details: { provider: 'google' },
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    }).catch(console.error).finally(() => {
+                        // ログイン成功後、ダッシュボードへリダイレクト
+                        window.location.href = 'dashboard.html';
+                    });
                 })
                 .catch(error => {
                     console.error("ログインに失敗しました:", error);

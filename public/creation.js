@@ -134,6 +134,11 @@ function compressImage(file) {
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
+                
+                // 【重要】透過PNGなどがJPEG変換時に黒つぶれ（または異常な白黒化）するのを防ぐため、背景を白で塗りつぶす
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, width, height);
+
                 // EXIF回転や巨大画像のリサイズのみを行い、色はそのまま（カラー）維持する
                 ctx.drawImage(img, 0, 0, width, height);
 

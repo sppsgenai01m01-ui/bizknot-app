@@ -115,8 +115,8 @@ function compressImage(file) {
             img.src = event.target.result;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                // Firestoreの容量制限を避けるため最大サイズを800pxに制限
-                const maxSize = 800;
+                // OCR精度を担保するため最大サイズを1200pxに引き上げ（カラーでも容量はFirestore制限内）
+                const maxSize = 1200;
                 let width = img.width;
                 let height = img.height;
 
@@ -134,34 +134,8 @@ function compressImage(file) {
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
+                // EXIF回転や巨大画像のリサイズのみを行い、色はそのまま（カラー）維持する
                 ctx.drawImage(img, 0, 0, width, height);
-                
-                // --- 画像の前処理（グレースケール＋動的二値化によるOCR精度向上） ---
-                const imageData = ctx.getImageData(0, 0, width, height);
-                const data = imageData.data;
-                let totalLuminance = 0;
-                
-                for (let i = 0; i < data.length; i += 4) {
-                    const r = data[i], g = data[i+1], b = data[i+2];
-                    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-                    totalLuminance += luminance;
-                }
-                const avgLuminance = totalLuminance / (width * height);
-                // 平均輝度を基準に閾値を設定（少し明るいピクセルは完全に白に飛ばす）
-                const threshold = avgLuminance * 0.9;
-
-                for (let i = 0; i < data.length; i += 4) {
-                    const r = data[i], g = data[i+1], b = data[i+2];
-                    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-                    if (luminance > threshold) {
-                        data[i] = 255; data[i+1] = 255; data[i+2] = 255; // 白
-                    } else {
-                        // コントラストを強調（文字を濃くする）
-                        const dark = luminance * 0.6;
-                        data[i] = dark; data[i+1] = dark; data[i+2] = dark;
-                    }
-                }
-                ctx.putImageData(imageData, 0, 0);
 
                 // 画質80%でJPEG圧縮
                 const base64Data = canvas.toDataURL('image/jpeg', 0.8);

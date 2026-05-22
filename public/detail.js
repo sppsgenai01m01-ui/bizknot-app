@@ -117,11 +117,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (departmentTitle) departmentTitle.textContent = depTitle.join(" ") || "部署・役職未登録";
 
                 // 連絡先
-                if (emailField) emailField.innerHTML = `<span class="font-bold text-gray-600">Email:</span> ${data.email || "未登録"}`;
-                if (companyPhoneField) companyPhoneField.innerHTML = `<span class="font-bold text-gray-600">会社TEL:</span> ${data.companyPhone || "未登録"}`;
-                if (mobilePhoneField) mobilePhoneField.innerHTML = `<span class="font-bold text-gray-600">携帯TEL:</span> ${data.mobilePhone || "未登録"}`;
-                if (faxField) faxField.innerHTML = `<span class="font-bold text-gray-600">FAX:</span> ${data.fax || "未登録"}`;
-                if (addressField) addressField.innerHTML = `<span class="font-bold text-gray-600">Address:</span> ${data.address || "未登録"}`;
+                const createEmailButton = (email) => {
+                    if (!email) return `<span class="font-bold text-gray-600 w-24 inline-block">Email:</span> 未登録`;
+                    return `<div class="flex flex-wrap items-center gap-2"><span class="font-bold text-gray-600 w-24 flex-shrink-0">Email:</span>
+                            <span class="text-gray-800 break-all">${email}</span>
+                            <a href="mailto:${email}" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-full text-sm inline-flex items-center shadow-sm transition-colors md:ml-auto">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                メール送信
+                            </a></div>`;
+                };
+                
+                const createPhoneButton = (label, phone) => {
+                    if (!phone) return `<span class="font-bold text-gray-600 w-24 inline-block">${label}:</span> 未登録`;
+                    const cleanPhone = phone.replace(/[^\d+]/g, '');
+                    return `<div class="flex flex-wrap items-center gap-2"><span class="font-bold text-gray-600 w-24 flex-shrink-0">${label}:</span> 
+                            <span class="text-gray-800">${phone}</span>
+                            <a href="tel:${cleanPhone}" class="md:hidden bg-green-500 active:bg-green-600 text-white px-3 py-1.5 rounded-full text-sm inline-flex items-center shadow-sm transition-colors ml-auto">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                                電話をかける
+                            </a></div>`;
+                };
+
+                if (emailField) emailField.innerHTML = createEmailButton(data.email);
+                if (companyPhoneField) companyPhoneField.innerHTML = createPhoneButton("会社TEL", data.companyPhone);
+                if (mobilePhoneField) mobilePhoneField.innerHTML = createPhoneButton("携帯TEL", data.mobilePhone);
+                if (faxField) faxField.innerHTML = `<span class="font-bold text-gray-600 w-24 inline-block">FAX:</span> ${data.fax || "未登録"}`;
+                if (addressField) addressField.innerHTML = `<span class="font-bold text-gray-600 w-24 inline-block">Address:</span> ${data.address || "未登録"}`;
 
                 // メモ（OCR全文など）の表示
                 if (customFieldsDisplayContainer && customFieldsListDisplay) {

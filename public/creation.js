@@ -177,9 +177,9 @@ async function uploadAndProceed(file) {
         console.log("OCR解析を開始します...");
         // 英語もロードしメール/URLの精度向上
         const worker = await Tesseract.createWorker('jpn+eng');
-        // PSMを11（散在するテキスト）に設定し名刺特有のレイアウトに対応
+        // 名刺のようなブロック構造の文書には AUTO (3) もしくは SINGLE_BLOCK (6) が最適
         await worker.setParameters({
-            tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT,
+            tessedit_pageseg_mode: Tesseract.PSM.AUTO,
         });
         const ret = await worker.recognize(compressedBase64);
         const extractedText = ret.data.text;
@@ -210,11 +210,18 @@ async function uploadAndProceed(file) {
         };
 
         const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-        // 全文からメールアドレスを抽出（行分割による漏れを防ぐ）
-        const allText = extractedText.replace(/[\s　]/g, '');
-        const emailMatches = allText.match(emailRegex);
+        // まずはそのままのテキストから抽出（他の項目との結合バグを防ぐ）
+        let emailMatches = extractedText.match(emailRegex);
+        if (!emailMatches) {
+            // 見つからなければ、スペースを除去して再度探す（ただし、前後の長すぎるノイズを避けるため文字数を制限）
+            const allText = extractedText.replace(/[\s　]/g, '');
+            emailMatches = allText.match(/[a-zA-Z0-9._%+-]{1,40}@[a-zA-Z0-9.-]{1,40}\.[a-zA-Z]{2,}/g);
+        }
+        
         if (emailMatches && emailMatches.length > 0) {
-            parsedData.email = emailMatches[0];
+            // 万が一 "FAXemail@..." のように他の文字がくっついている場合は "FAX" や "TEL" "Email" などのプレフィックスを除去
+            let cleanEmail = emailMatches[0].replace(/^(?:FAX|TEL|PHONE|MOBILE|EMAIL|E-MAIL|MAIL)[:：\s-]*/i, '');
+            parsedData.email = cleanEmail;
         }
 
         const phoneRegex = /(0\d{1,4}[-ー\s~]?\d{1,4}[-ー\s~]?\d{3,4})/g;

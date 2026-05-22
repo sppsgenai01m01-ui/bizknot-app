@@ -43,6 +43,17 @@ fileInput.addEventListener('change', (e) => {
     }
 });
 
+if (fileSelectButton) {
+    fileSelectButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // 親要素のクリックイベントと重複させない
+        fileInput.click();
+    });
+}
+const mobileFileSelectButton = document.getElementById('mobile-file-select-button');
+if (mobileFileSelectButton) {
+    mobileFileSelectButton.addEventListener('click', () => fileInput.click());
+}
+
 if (cameraInput) {
     cameraInput.addEventListener('change', (e) => {
         if (e.target.files.length > 0) handleFile(e.target.files[0]);
@@ -66,13 +77,11 @@ function setupDragAndDrop() {
             handleFile(files[0]);
         }
     });
-    fileSelectButton.addEventListener('click', () => fileInput.click());
     
-    // スマホ版のファイル選択ボタン
-    const mobileFileSelectButton = document.getElementById('mobile-file-select-button');
-    if (mobileFileSelectButton) {
-        mobileFileSelectButton.addEventListener('click', () => fileInput.click());
-    }
+    // エリア全体をクリックしてもファイル選択を開く
+    dropZone.addEventListener('click', (e) => {
+        fileInput.click();
+    });
 }
 
 // ネイティブカメラへの移行により独自のシャッター処理は廃止
@@ -154,14 +163,15 @@ async function uploadAndProceed(file) {
     try {
         // --- 1. Tesseract.js による OCR 解析 (完全無料・ブラウザ完結) ---
         console.log("OCR解析を開始します...");
-        const worker = await Tesseract.createWorker('jpn');
+        // 縦書き（jpn_vert）と横書き（jpn）を両方サポート
+        const worker = await Tesseract.createWorker('jpn+jpn_vert');
 
         const ret = await worker.recognize(file);
         const extractedText = ret.data.text;
         await worker.terminate();
         console.log("OCR解析完了");
 
-        // --- 2. 抽出テキストからの簡易パース（ゆらぎ許容ロジック） ---
+        // --- 2. 抽出テキストからの高度なパース（ゆらぎ・1行複数項目対応） ---
         const lines = extractedText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         
         let parsedData = {
@@ -177,75 +187,94 @@ async function uploadAndProceed(file) {
             memo: ""
         };
 
-        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-        // ゆらぎ対応: スペースが含まれたり、ハイフンが別の記号として認識された場合も許容
-        const phoneRegex = /(0\d{1,4}[-ー\s~]?\d{1,4}[-ー\s~]?\d{3,4})/;
+        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+        const phoneRegex = /(0\d{1,4}[-ー\s~]?\d{1,4}[-ー\s~]?\d{3,4})/g;
         const zipRegex = /[〒T\+]\s?\d{3}[-ー]?\d{4}/i;
 
-        const unparsedLines = [];
+        // 全文からメールアドレスを抽出（最初のものを採用）
+        const allText = extractedText.replace(/[\s　]/g, '');
+        const emailMatches = allText.match(emailRegex);
+        if (emailMatches && emailMatches.length > 0) {
+            parsedData.email = emailMatches[0];
+        }
 
-        lines.forEach(line => {
-            let matched = false;
-            // 全角・半角スペースを除去したクリーンな行
+        // 行ごとに処理しながら、電話番号・住所・役職・会社名を抽出
+        const usedLines = new Set();
+        const phones = [];
+
+        lines.forEach((line, i) => {
             const cleanLine = line.replace(/[\s　]/g, '');
+            if (cleanLine.length === 0) return;
 
-            // 1. メールアドレス
-            if (!parsedData.email && emailRegex.test(cleanLine)) {
-                parsedData.email = cleanLine.match(emailRegex)[0];
-                matched = true;
+            // 電話番号の抽出 (複数/行またぎ対応)
+            let match;
+            while ((match = phoneRegex.exec(cleanLine)) !== null) {
+                // 直前の行と現在の行を連結してコンテキスト（ラベル）を判定
+                const context = ((i > 0 ? lines[i-1] : '') + line).toLowerCase();
+                const number = match[1].replace(/[-ー\s~]/g, '-');
+                phones.push({ number, context, lineIndex: i });
+                // 電話番号が含まれる行は名前や会社名ではない可能性が高い
+                usedLines.add(i);
             }
-            // 2. 電話・FAX番号の細分化抽出
-            else if (phoneRegex.test(cleanLine)) {
-                const number = cleanLine.match(phoneRegex)[0].replace(/[-ー\s~]/g, '-');
-                
-                if (cleanLine.match(/fax/i)) {
-                    if (!parsedData.fax) {
-                        parsedData.fax = number;
-                        matched = true;
-                    }
-                } else if (cleanLine.match(/(携帯|mobile|090|080|070)/i) || number.startsWith('090') || number.startsWith('080') || number.startsWith('070')) {
-                    if (!parsedData.mobilePhone) {
-                        parsedData.mobilePhone = number;
-                        matched = true;
-                    }
-                } else {
-                    if (!parsedData.companyPhone) {
-                        parsedData.companyPhone = number;
-                        matched = true;
-                    }
-                }
-            }
-            // 3. 会社名 (ゴミ文字パージと、スペースが入った「株 式 会 社」対応)
-            else if (!parsedData.companyName && cleanLine.match(/(?:株式|有限|合同|Inc|Corp)/i)) {
-                // 株式会社以降の文字列を抽出
-                const match = cleanLine.match(/(?:株式会社|有限会社|合同会社).+/);
-                parsedData.companyName = match ? match[0] : cleanLine;
-                matched = true;
-            }
-            // 4. 住所 (〒の誤読や都道府県に対応)
-            else if (!parsedData.address && (zipRegex.test(cleanLine) || cleanLine.match(/(都|道|府|県|市区町村)/))) {
+
+            // 住所の抽出
+            if (!parsedData.address && (zipRegex.test(cleanLine) || cleanLine.match(/(都|道|府|県|市区町村)/))) {
                 parsedData.address = cleanLine.replace(/^(?:.*住所[:：])?(?:.*〒)?([0-9]{3}[-ー][0-9]{4})?/, '〒$1 ');
                 if(!parsedData.address.includes('〒')) {
                     parsedData.address = cleanLine.replace(/^.*(?:住所[:：])?/, '');
                 }
-                matched = true;
+                usedLines.add(i);
             }
-            // 5. 役職・部署 (複数のキーワードでゆらぎ対応)
-            else if (!parsedData.department && !parsedData.position && cleanLine.match(/(部|課|室|代表|社長|取締役|マネージャー|チーフ|担当|CEO|CTO|CFO)/i)) {
-                parsedData.position = line;
-                matched = true;
-            }
-            // 6. 氏名 (数字・記号が含まれない、2〜20文字程度の文字列)
-            else if (!parsedData.name && !cleanLine.match(/[0-9@,.:]/) && cleanLine.length >= 2 && cleanLine.length <= 20) {
-                let nameCandidate = line.replace(/(代表取締役|社長|役員|執行役員|本部長|事業部長|部長|次長|課長|係長|主任)/g, '').trim();
-                if (nameCandidate.length >= 2) {
-                    parsedData.name = nameCandidate;
-                    matched = true;
+
+            // 役職・部署の抽出
+            if (cleanLine.match(/(部|課|室|代表|社長|取締役|マネージャー|チーフ|担当|CEO|CTO|CFO|店長|主任|営業|Office|オフィス)/i) && cleanLine.length < 30) {
+                if (!parsedData.position) {
+                    parsedData.position = line;
+                    usedLines.add(i);
+                } else if (!parsedData.department) {
+                    parsedData.department = parsedData.position;
+                    parsedData.position = line;
+                    usedLines.add(i);
                 }
             }
 
-            if (!matched) {
-                unparsedLines.push(line);
+            // 会社名の抽出 (キーワード拡充)
+            if (!parsedData.companyName && cleanLine.match(/(?:株式|有限|合同|Inc|Corp|Office|オフィス|事務所|クリニック|店|屋)/i)) {
+                // 英語や各種法人格を含む行全体を採用（余計なラベルは外す可能性あり）
+                parsedData.companyName = line;
+                usedLines.add(i);
+            }
+            
+            // URLが含まれる場合は除外しておく
+            if (cleanLine.match(/http/i) || cleanLine.match(/www\./i) || cleanLine.match(/\.com|\.co\.jp|\.net/i)) {
+                usedLines.add(i);
+            }
+        });
+
+        // 抽出した電話番号を種別ごとに割り当て
+        phones.forEach(p => {
+            if (p.context.match(/fax/i)) {
+                if (!parsedData.fax) parsedData.fax = p.number;
+            } else if (p.context.match(/(携帯|mobile|cell)/i) || p.number.startsWith('090') || p.number.startsWith('080') || p.number.startsWith('070')) {
+                if (!parsedData.mobilePhone) parsedData.mobilePhone = p.number;
+            } else {
+                if (!parsedData.companyPhone) parsedData.companyPhone = p.number;
+            }
+        });
+
+        // 氏名の抽出 (残った行から推測)
+        lines.forEach((line, i) => {
+            if (usedLines.has(i) || parsedData.name) return;
+            const cleanLine = line.replace(/[\s　]/g, '');
+            // 数字やEメール特有の記号を含まない、2〜20文字
+            if (!cleanLine.match(/[0-9@,.:]/) && cleanLine.length >= 2 && cleanLine.length <= 20) {
+                // 余計な役職テキストなどが混入していれば除去
+                let nameCandidate = line.replace(/(代表取締役|社長|役員|執行役員|本部長|事業部長|部長|次長|課長|係長|主任|店長|営業)/g, '').trim();
+                // 英語表記（ローマ字）が混ざっている場合、日本語部分のみを優先するかそのまま使う
+                if (nameCandidate.length >= 2) {
+                    parsedData.name = nameCandidate;
+                    usedLines.add(i);
+                }
             }
         });
 

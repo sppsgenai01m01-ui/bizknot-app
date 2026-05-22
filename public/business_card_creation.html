@@ -28,11 +28,15 @@
 
         <!-- スマホ向け: カメラ -->
         <div id="camera-view" class="md:hidden w-full max-w-md flex flex-col items-center">
-            <video id="video-element" class="w-full rounded-lg shadow-md" autoplay playsinline></video>
-            <button id="shutter-button" class="mt-4 w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-xl">撮影</button>
-            <div class="mt-4 text-center">
-                <p class="text-sm text-gray-500 mb-2">または</p>
-                <button id="mobile-file-select-button" class="text-blue-500 hover:text-blue-700 font-medium cursor-pointer">アルバム/フォルダから選択</button>
+            <label for="camera-input" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-lg text-xl cursor-pointer text-center flex items-center justify-center shadow-lg transition duration-200">
+                <svg class="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                カメラを起動する
+            </label>
+            <input type="file" id="camera-input" class="hidden" accept="image/*" capture="environment">
+            
+            <div class="mt-6 text-center w-full">
+                <p class="text-sm text-gray-500 mb-3">または</p>
+                <button id="mobile-file-select-button" class="w-full bg-white hover:bg-gray-100 text-gray-800 font-semibold py-3 px-4 border border-gray-300 rounded-lg shadow transition duration-200">アルバム/フォルダから選択</button>
             </div>
         </div>
 

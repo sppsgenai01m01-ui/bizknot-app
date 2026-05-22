@@ -63,6 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const container = document.getElementById('custom-fields-container');
                 const wrapper = document.getElementById('custom-fields-wrapper');
                 
+                // キャッシュ等で古いHTMLが読み込まれており、要素が存在しない場合はスキップ
+                if (!wrapper) {
+                    console.warn("カスタム項目の表示エリアが見つかりません。");
+                    return;
+                }
+                
                 snapshot.forEach(doc => {
                     const field = doc.data();
                     customFieldsDef.push({ id: doc.id, ...field });
@@ -218,8 +224,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     let savedCardId = cardId;
                     if (cardId) {
-                        // 編集：更新処理
-                        await db.collection('businessCards').doc(cardId).update(cardData);
+                        const cardRef = db.collection('businessCards').doc(cardId);
+                        
+                        // 履歴保存のために現在のデータを取得
+                        const currentDoc = await cardRef.get();
+                        if (currentDoc.exists) {
+                            const oldData = currentDoc.data();
+                            await cardRef.collection('history').add({
+                                ...oldData,
+                                archivedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        }
+
+                        await cardRef.update(cardData);
                     } else {
                         // 新規作成：SessionStorageに画像があれば含める
                         cardData.ownerId = currentUser.uid;
@@ -234,13 +251,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                 if (cardId) {
-                    messageArea.textContent = '名刺情報を更新しました！';
+                    messageArea.textContent = '名刺情報を更新しました！完了画面へ移動します。';
                     messageArea.className = 'text-green-600 mb-4 font-bold';
                     submitButton.disabled = false;
-                    // メッセージを3秒後に消去し、画面遷移は行わない
                     setTimeout(() => {
-                        messageArea.textContent = '';
-                    }, 3000);
+                        window.location.href = `/business_card_detail.html?id=${savedCardId}`;
+                    }, 1000);
                 } else {
                     messageArea.textContent = '名刺情報を保存しました！完了画面へ移動します。';
                     messageArea.className = 'text-green-600 mb-4 font-bold';

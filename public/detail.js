@@ -24,8 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteButton = document.getElementById('delete-button');
     const historyButton = document.getElementById('history-button'); // 追加
 
-    // 未実装の更新履歴ボタンは一旦非表示
-    if (historyButton) historyButton.style.display = 'none';
+    // 履歴ボタンの表示
+    if (historyButton) {
+        historyButton.style.display = 'inline-block';
+        historyButton.addEventListener('click', showHistoryModal);
+    }
 
     let currentUser = null;
     let userPermission = 'user';
@@ -201,5 +204,71 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    }
+
+    // --- 履歴表示機能 ---
+    async function showHistoryModal() {
+        if (!cardId) return;
+
+        // モーダルの作成
+        let modal = document.getElementById('history-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'history-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col m-4">
+                    <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
+                        <h3 class="text-xl font-bold text-gray-800">更新履歴</h3>
+                        <button id="close-history-modal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="p-4 overflow-y-auto flex-1 bg-gray-100" id="history-content">
+                        <div class="flex justify-center my-8"><div class="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-blue-500"></div></div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            document.getElementById('close-history-modal').addEventListener('click', () => {
+                modal.classList.add('hidden');
+            });
+        }
+        modal.classList.remove('hidden');
+
+        const historyContent = document.getElementById('history-content');
+        historyContent.innerHTML = '<div class="flex justify-center my-8"><div class="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-blue-500"></div></div>';
+
+        try {
+            const snapshot = await db.collection('businessCards').doc(cardId).collection('history').orderBy('archivedAt', 'desc').get();
+            if (snapshot.empty) {
+                historyContent.innerHTML = '<p class="text-center text-gray-500 py-8">更新履歴はありません。</p>';
+                return;
+            }
+
+            let html = '<div class="space-y-4">';
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const date = data.archivedAt ? data.archivedAt.toDate().toLocaleString('ja-JP') : '不明な日時';
+                html += `
+                    <div class="bg-white p-4 rounded shadow-sm border border-gray-200">
+                        <div class="text-sm text-gray-500 mb-2 border-b pb-1">変更前データ (保存日時: ${date})</div>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div><span class="text-gray-500">会社名:</span> <span class="font-medium">${data.companyName || '-'}</span></div>
+                            <div><span class="text-gray-500">氏名:</span> <span class="font-medium">${data.name || '-'}</span></div>
+                            <div><span class="text-gray-500">部署:</span> ${data.department || '-'}</div>
+                            <div><span class="text-gray-500">役職:</span> ${data.position || '-'}</div>
+                            <div class="col-span-2"><span class="text-gray-500">Email:</span> ${data.email || '-'}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            historyContent.innerHTML = html;
+
+        } catch (error) {
+            console.error("履歴の取得に失敗:", error);
+            historyContent.innerHTML = '<p class="text-center text-red-500 py-8">履歴の取得に失敗しました。</p>';
+        }
     }
 });

@@ -220,19 +220,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col m-4">
                     <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
                         <h3 class="text-xl font-bold text-gray-800">更新履歴</h3>
-                        <button id="close-history-modal" class="text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-times text-xl"></i>
+                        <button id="close-history-modal" class="text-gray-500 hover:text-red-500 bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
                     <div class="p-4 overflow-y-auto flex-1 bg-gray-100" id="history-content">
                         <div class="flex justify-center my-8"><div class="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-blue-500"></div></div>
                     </div>
+                    <div class="p-4 border-t bg-gray-50 rounded-b-lg flex justify-end">
+                        <button id="close-history-modal-btn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded shadow">閉じる</button>
+                    </div>
                 </div>
             `;
             document.body.appendChild(modal);
-            document.getElementById('close-history-modal').addEventListener('click', () => {
-                modal.classList.add('hidden');
-            });
+            const closeModal = () => modal.classList.add('hidden');
+            document.getElementById('close-history-modal').addEventListener('click', closeModal);
+            document.getElementById('close-history-modal-btn').addEventListener('click', closeModal);
         }
         modal.classList.remove('hidden');
 

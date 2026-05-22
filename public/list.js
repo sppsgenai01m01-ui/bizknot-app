@@ -8,8 +8,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchDepartment = document.getElementById('search-department');
     const searchEmail = document.getElementById('search-email');
     const searchAddress = document.getElementById('search-address');
+    const exportCsvBtn = document.getElementById('export-csv-button');
+    const scrollSentinel = document.getElementById('scroll-sentinel');
+    const loadingMoreSpinner = document.getElementById('loading-more-spinner');
 
     let allCards = []; // インメモリフィルタリング用の全データ保持
+    let currentFilteredCards = []; // 現在の検索条件に合致するデータ
+    let displayedCount = 0; // 現在画面に表示されている件数
+    const CARDS_PER_PAGE = 20; // 1回のスクロールで読み込む件数
+    let observer; // IntersectionObserver
 
     // 詳細検索の開閉トグル
     if (toggleAdvancedBtn) {
@@ -58,29 +65,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            renderCards(allCards);
+            currentFilteredCards = [...allCards];
+            displayedCount = 0;
+            cardListContainer.innerHTML = '';
+            
+            // 初回のN件を描画
+            loadMoreCards();
+            
+            // 無限スクロールの監視開始
+            setupIntersectionObserver();
+            
         } catch (error) {
             console.error("Error fetching cards:", error);
             cardListContainer.innerHTML = '<p class="col-span-full text-center text-red-500 font-bold py-8">データの読み込みに失敗しました。</p>';
         }
     }
 
-    // カードを画面に描画
-    function renderCards(cardsToRender) {
-        if (!cardListContainer) return;
-        cardListContainer.innerHTML = '';
+    // 無限スクロール用の監視セットアップ
+    function setupIntersectionObserver() {
+        if (observer) observer.disconnect();
+        observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                loadMoreCards();
+            }
+        }, { rootMargin: '100px' });
         
-        if (cardsToRender.length === 0) {
+        if (scrollSentinel) observer.observe(scrollSentinel);
+    }
+
+    // 追加のカードを読み込んで描画する（ページネーション）
+    function loadMoreCards() {
+        if (!cardListContainer) return;
+        
+        if (displayedCount >= currentFilteredCards.length) {
+            // すべて表示済み
+            if (loadingMoreSpinner) loadingMoreSpinner.classList.add('hidden');
+            return;
+        }
+
+        if (loadingMoreSpinner) loadingMoreSpinner.classList.remove('hidden');
+
+        // 表示すべき次のバッチを取得
+        const nextBatch = currentFilteredCards.slice(displayedCount, displayedCount + CARDS_PER_PAGE);
+        
+        if (displayedCount === 0 && nextBatch.length === 0) {
             cardListContainer.innerHTML = `
                 <div class="col-span-full text-center bg-white rounded-xl shadow-sm border border-gray-200 py-12">
                     <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <p class="text-gray-500 text-lg font-semibold">条件に一致する名刺が見つかりません</p>
                 </div>
             `;
+            if (loadingMoreSpinner) loadingMoreSpinner.classList.add('hidden');
             return;
         }
 
-        cardsToRender.forEach(card => {
+        nextBatch.forEach(card => {
             const el = document.createElement('a');
             el.href = `/business_card_detail.html?id=${card.id}`;
             el.className = "block bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:-translate-y-1 transition transform duration-200 overflow-hidden";
@@ -99,6 +138,15 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             cardListContainer.appendChild(el);
         });
+
+        displayedCount += nextBatch.length;
+        if (loadingMoreSpinner) {
+            if (displayedCount >= currentFilteredCards.length) {
+                loadingMoreSpinner.classList.add('hidden');
+            } else {
+                loadingMoreSpinner.classList.remove('hidden');
+            }
+        }
     }
 
     // 検索フィルタリング実行
@@ -110,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = searchEmail.value.toLowerCase();
         const address = searchAddress.value.toLowerCase();
 
-        const filtered = allCards.filter(card => {
+        currentFilteredCards = allCards.filter(card => {
             // 基本キーワード（会社名 or 氏名）
             const matchKeyword = !keyword || 
                 (card.name && card.name.toLowerCase().includes(keyword)) ||
@@ -127,8 +175,66 @@ document.addEventListener('DOMContentLoaded', () => {
             return matchKeyword && matchDep && matchEmail && matchAddress;
         });
 
-        renderCards(filtered);
+        // 検索結果で画面をリセット
+        cardListContainer.innerHTML = '';
+        displayedCount = 0;
+        loadMoreCards();
     }
+
+    // CSVエクスポート実行
+    function exportCsv() {
+        if (!currentFilteredCards || currentFilteredCards.length === 0) {
+            alert("エクスポートするデータがありません。");
+            return;
+        }
+
+        // BOM付きUTF-8で文字化け防止
+        const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+        
+        // ヘッダー行
+        const headers = ['会社名', '部署', '役職', '氏名', 'Email', '会社TEL', '携帯TEL', 'FAX', '住所', 'メモ'];
+        let csvContent = headers.join(',') + '\n';
+
+        // エスケープ処理（カンマや改行を含む場合）
+        const escapeCsv = (str) => {
+            if (!str) return '';
+            let s = String(str);
+            if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+                s = '"' + s.replace(/"/g, '""') + '"';
+            }
+            return s;
+        };
+
+        // データ行
+        currentFilteredCards.forEach(card => {
+            const row = [
+                escapeCsv(card.companyName),
+                escapeCsv(card.department),
+                escapeCsv(card.position),
+                escapeCsv(card.name),
+                escapeCsv(card.email),
+                escapeCsv(card.companyPhone),
+                escapeCsv(card.mobilePhone),
+                escapeCsv(card.fax),
+                escapeCsv(card.address),
+                escapeCsv(card.memo)
+            ];
+            csvContent += row.join(',') + '\n';
+        });
+
+        // ダウンロード処理
+        const blob = new Blob([bom, csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.download = `bizknot_cards_${dateStr}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    // イベントバインド
+    if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportCsv);
 
     // 検索イベントのバインド
     if (searchButton) searchButton.addEventListener('click', performSearch);

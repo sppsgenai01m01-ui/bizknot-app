@@ -77,8 +77,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (cardImage) {
                     if (data.imageUrl) {
                         cardImage.src = data.imageUrl;
+                        cardImage.classList.add('cursor-pointer');
                     } else {
                         cardImage.src = "https://placehold.jp/300x200.png?text=No+Image";
+                        cardImage.classList.remove('cursor-pointer');
+                    }
+
+                    // ライトボックス機能のセットアップ
+                    const lightboxModal = document.getElementById('lightbox-modal');
+                    const lightboxImage = document.getElementById('lightbox-image');
+                    const closeLightboxBtn = document.getElementById('close-lightbox-btn');
+                    
+                    if (lightboxModal && lightboxImage && data.imageUrl) {
+                        // クリックで拡大表示
+                        cardImage.addEventListener('click', () => {
+                            lightboxImage.src = data.imageUrl;
+                            lightboxModal.classList.remove('hidden');
+                        });
+                        
+                        // 閉じる処理
+                        const closeLightbox = () => {
+                            lightboxModal.classList.add('hidden');
+                            lightboxImage.src = ''; // メモリ解放
+                        };
+                        if (closeLightboxBtn) closeLightboxBtn.addEventListener('click', closeLightbox);
+                        lightboxModal.addEventListener('click', (e) => {
+                            if (e.target === lightboxModal) closeLightbox();
+                        });
                     }
                 }
 

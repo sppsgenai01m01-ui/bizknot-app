@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userDisplayName = document.getElementById('user-display-name');
     const logoutButton = document.getElementById('logout-button');
     const summaryCardCount = document.getElementById('summary-card-count');
+    const summaryMonthCount = document.getElementById('summary-month-count');
     const recentCardsList = document.getElementById('recent-cards-list');
     const recentCardsListSkeleton = document.getElementById('recent-cards-list-skeleton');
     const adminMenu = document.getElementById('admin-menu');
@@ -56,14 +57,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fetchDashboardData() {
         db.collection('businessCards').get().then(snapshot => {
-            let count = 0;
+            let totalCount = 0;
+            let monthCount = 0;
+            
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
             snapshot.forEach(doc => {
-                if (!doc.data().deletedAt) count++;
+                const data = doc.data();
+                if (!data.deletedAt) {
+                    totalCount++;
+                    // 今月の登録数をカウント
+                    if (data.createdAt) {
+                        let createdAtDate = null;
+                        if (typeof data.createdAt.toDate === 'function') {
+                            createdAtDate = data.createdAt.toDate();
+                        } else {
+                            createdAtDate = new Date(data.createdAt);
+                        }
+                        
+                        if (createdAtDate && createdAtDate >= startOfMonth) {
+                            monthCount++;
+                        }
+                    }
+                }
             });
-            summaryCardCount.textContent = count;
+            summaryCardCount.textContent = totalCount;
+            if (summaryMonthCount) summaryMonthCount.textContent = monthCount;
         }).catch(error => {
-            console.error("名刺総数の取得に失敗しました:", error);
+            console.error("名刺統計の取得に失敗しました:", error);
             summaryCardCount.textContent = 'N/A';
+            if (summaryMonthCount) summaryMonthCount.textContent = 'N/A';
         });
 
         // 論理削除をフィルタリングするため多めに取得

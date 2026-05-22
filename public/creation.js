@@ -111,28 +111,6 @@ function compressImage(file) {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = event => {
-            const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-            modal.innerHTML = `
-                <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col m-4">
-                    <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
-                        <h3 class="text-xl font-bold text-gray-800">更新履歴</h3>
-                        <button id="close-history-modal" class="text-gray-500 hover:text-red-500 bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                    <div class="p-4 overflow-y-auto flex-1 bg-gray-100" id="history-content">
-                        <div class="flex justify-center my-8"><div class="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-blue-500"></div></div>
-                    </div>
-                    <div class="p-4 border-t bg-gray-50 rounded-b-lg flex justify-end">
-                        <button id="close-history-modal-btn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded shadow">閉じる</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            const closeModal = () => modal.classList.add('hidden');
-            document.getElementById('close-history-modal').addEventListener('click', closeModal);
-            document.getElementById('close-history-modal-btn').addEventListener('click', closeModal);
             const img = new Image();
             img.src = event.target.result;
             img.onload = () => {
@@ -157,8 +135,36 @@ function compressImage(file) {
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                // 画質70%でJPEG圧縮しBase64出力（約100KB前後になる）
-                const base64Data = canvas.toDataURL('image/jpeg', 0.7);
+                
+                // --- 画像の前処理（グレースケール＋動的二値化によるOCR精度向上） ---
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                let totalLuminance = 0;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i+1], b = data[i+2];
+                    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+                    totalLuminance += luminance;
+                }
+                const avgLuminance = totalLuminance / (width * height);
+                // 平均輝度を基準に閾値を設定（少し明るいピクセルは完全に白に飛ばす）
+                const threshold = avgLuminance * 0.9;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i+1], b = data[i+2];
+                    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+                    if (luminance > threshold) {
+                        data[i] = 255; data[i+1] = 255; data[i+2] = 255; // 白
+                    } else {
+                        // コントラストを強調（文字を濃くする）
+                        const dark = luminance * 0.6;
+                        data[i] = dark; data[i+1] = dark; data[i+2] = dark;
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+
+                // 画質80%でJPEG圧縮
+                const base64Data = canvas.toDataURL('image/jpeg', 0.8);
                 resolve(base64Data);
             };
             img.onerror = error => reject(error);
@@ -188,14 +194,34 @@ async function uploadAndProceed(file) {
         console.log("画像の事前最適化を実行します...");
         const compressedBase64 = await compressImage(file);
 
-        // --- 2. Tesseract.js による OCR 解析 (完全無料・ブラウザ完結) ---
+        // --- 2. Tesseract.js による OCR 解析 ---
         console.log("OCR解析を開始します...");
-        const worker = await Tesseract.createWorker('jpn+jpn_vert');
-        // 生のfileではなく、回転補正・リサイズ済みの画像を渡すことで精度と速度が劇的に向上する
+        // 英語もロードしメール/URLの精度向上
+        const worker = await Tesseract.createWorker('jpn+eng');
+        // PSMを11（散在するテキスト）に設定し名刺特有のレイアウトに対応
+        await worker.setParameters({
+            tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT,
+        });
         const ret = await worker.recognize(compressedBase64);
         const extractedText = ret.data.text;
         await worker.terminate();
         console.log("OCR解析完了");
+
+        // --- レーベンシュタイン距離関数（ファジーマッチ用） ---
+        const levenshtein = (a, b) => {
+            if (a.length === 0) return b.length;
+            if (b.length === 0) return a.length;
+            const matrix = Array.from({length: b.length + 1}, (_, i) => [i]);
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
+                    else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
+                }
+            }
+            return matrix[b.length][a.length];
+        };
+        const commonPositions = ["代表取締役", "社長", "取締役", "執行役員", "本部長", "事業部長", "部長", "次長", "課長", "係長", "主任", "店長", "営業", "マネージャー"];
 
         // --- 3. 抽出テキストからの高度なパース ---
         const lines = extractedText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -204,73 +230,109 @@ async function uploadAndProceed(file) {
             companyName: "", name: "", email: "", companyPhone: "", mobilePhone: "", fax: "", department: "", position: "", address: "", memo: ""
         };
 
+        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+        // 全文からメールアドレスを抽出（行分割による漏れを防ぐ）
+        const allText = extractedText.replace(/[\s　]/g, '');
+        const emailMatches = allText.match(emailRegex);
+        if (emailMatches && emailMatches.length > 0) {
+            parsedData.email = emailMatches[0];
+        }
+
         const phoneRegex = /(0\d{1,4}[-ー\s~]?\d{1,4}[-ー\s~]?\d{3,4})/g;
-        const zipRegex = /[〒T\+]\s?\d{3}[-ー]?\d{4}/i;
+        const zipRegex = /[〒T\+]\s?([0-9]{3})[-ー]?([0-9]{4})/i;
 
         const usedLines = new Set();
         const phones = [];
 
-        // Eメールは各行ごとに判定（ゴミデータに巻き込まれないようにする）
-        lines.forEach((line, i) => {
+        for (let i = 0; i < lines.length; i++) {
+            if (usedLines.has(i)) continue;
+            let line = lines[i];
             const cleanLine = line.replace(/[\s　]/g, '');
-            if (!parsedData.email) {
-                // Eメール抽出の正規表現をやや緩めに設定（OCRの誤認識 e-rnail などにも強くするため、@の前後で判定）
-                const emailMatch = cleanLine.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-                if (emailMatch) {
-                    parsedData.email = emailMatch[0];
-                    usedLines.add(i);
-                }
-            }
-        });
+            if (cleanLine.length === 0) continue;
 
-        lines.forEach((line, i) => {
-            if (usedLines.has(i)) return;
-            const cleanLine = line.replace(/[\s　]/g, '');
-            if (cleanLine.length === 0) return;
-
-            // 電話番号の抽出 (複数/行またぎ対応)
+            // 電話番号の抽出
             let match;
+            let hasPhoneInLine = false;
             while ((match = phoneRegex.exec(cleanLine)) !== null) {
-                // 番号の直前15文字を取得して判定（同じ行にTELとFAXがあっても区別できるようにする抜本的修正）
+                hasPhoneInLine = true;
                 const prefix = cleanLine.substring(Math.max(0, match.index - 15), match.index).toLowerCase();
                 const context = ((i > 0 ? lines[i-1] : '') + prefix).toLowerCase();
                 const number = match[1].replace(/[-ー\s~]/g, '-');
                 phones.push({ number, context, lineIndex: i });
-                usedLines.add(i);
+                
+                // 役職にTEL等が混入しないよう、電話番号部分を元のlineから除去する
+                line = line.replace(match[0], '');
+            }
+            if (hasPhoneInLine) {
+                line = line.replace(/(TEL|FAX|Phone|Mobile|携帯|[:：\s])/gi, '').trim();
+                if (line.length < 2) usedLines.add(i); // 番号以外何も残らなければ無視
             }
 
-            // 住所の抽出
-            if (!parsedData.address && (zipRegex.test(cleanLine) || cleanLine.match(/(都|道|府|県|市区町村)/))) {
-                parsedData.address = cleanLine.replace(/^(?:.*住所[:：])?(?:.*〒)?([0-9]{3}[-ー][0-9]{4})?/, '〒$1 ');
+            // 住所の抽出とAPI補完
+            const zMatch = line.match(zipRegex);
+            if (!parsedData.address && (zMatch || cleanLine.match(/(都|道|府|県|市区町村)/))) {
+                if (zMatch) {
+                    const zipcode = zMatch[1] + zMatch[2];
+                    try {
+                        const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zipcode}`);
+                        const zipData = await res.json();
+                        if (zipData.status === 200 && zipData.results) {
+                            const result = zipData.results[0];
+                            parsedData.address = `〒${zMatch[1]}-${zMatch[2]} ${result.address1}${result.address2}${result.address3}`;
+                            // ビル名などを追加で探す
+                            const restOfLine = line.replace(zMatch[0], '').trim();
+                            if (restOfLine) parsedData.address += ' ' + restOfLine;
+                            // 次の行も住所（番地・ビル名）である可能性が高い
+                            if (i + 1 < lines.length && !lines[i+1].match(/[0-9@]/) && lines[i+1].length > 2) {
+                                parsedData.address += ' ' + lines[i+1].trim();
+                                usedLines.add(i+1);
+                            }
+                            usedLines.add(i);
+                            continue;
+                        }
+                    } catch(e) { console.error("Zipcloud API error", e); }
+                }
+                // API失敗時または〒がない場合
+                parsedData.address = line.replace(/^(?:.*住所[:：])?(?:.*〒)?([0-9]{3}[-ー][0-9]{4})?/, '〒$1 ');
                 if(!parsedData.address.includes('〒')) {
-                    parsedData.address = cleanLine.replace(/^.*(?:住所[:：])?/, '');
+                    parsedData.address = line.replace(/^.*(?:住所[:：])?/, '');
                 }
                 usedLines.add(i);
             }
 
-            // 役職・部署の抽出 (店・屋は会社名候補と被るため削除)
-            if (cleanLine.match(/(部|課|室|代表|社長|取締役|マネージャー|チーフ|担当|CEO|CTO|CFO|主任|営業|マネジメント)/i) && cleanLine.length < 30) {
+            // 役職・部署の抽出 (クリーニングされたlineを使用)
+            if (line.match(/(部|課|室|代表|社長|取締役|マネージャー|チーフ|担当|CEO|CTO|CFO|主任|営業|マネジメント)/i) && line.length < 30) {
+                // レーベンシュタイン距離によるクリーニング
+                let cleanedPosition = line.trim();
+                for (const t of commonPositions) {
+                    if (Math.abs(t.length - cleanedPosition.length) <= 2) {
+                        if (levenshtein(t, cleanedPosition) <= 2) {
+                            cleanedPosition = t;
+                            break;
+                        }
+                    }
+                }
                 if (!parsedData.position) {
-                    parsedData.position = line;
+                    parsedData.position = cleanedPosition;
                     usedLines.add(i);
                 } else if (!parsedData.department) {
                     parsedData.department = parsedData.position;
-                    parsedData.position = line;
+                    parsedData.position = cleanedPosition;
                     usedLines.add(i);
                 }
             }
 
             // 会社名の抽出 (キーワード拡充)
-            if (!parsedData.companyName && cleanLine.match(/(?:株式|有限|合同|Inc|Corp|Office|オフィス|事務所|クリニック|財団|社団|組合)/i)) {
+            if (!parsedData.companyName && line.match(/(?:株式|有限|合同|Inc|Corp|Office|オフィス|事務所|クリニック|財団|社団|組合)/i)) {
                 parsedData.companyName = line;
                 usedLines.add(i);
             }
             
             // URLが含まれる場合は除外しておく
-            if (cleanLine.match(/http/i) || cleanLine.match(/www\./i) || cleanLine.match(/\.com|\.co\.jp|\.net/i)) {
+            if (line.match(/http/i) || line.match(/www\./i) || line.match(/\.com|\.co\.jp|\.net/i)) {
                 usedLines.add(i);
             }
-        });
+        }
 
         // 抽出した電話番号を種別ごとに割り当て
         phones.forEach(p => {
@@ -279,7 +341,12 @@ async function uploadAndProceed(file) {
             } else if (p.context.match(/(携帯|mobile|cell)/i) || p.number.startsWith('090') || p.number.startsWith('080') || p.number.startsWith('070')) {
                 if (!parsedData.mobilePhone) parsedData.mobilePhone = p.number;
             } else {
-                if (!parsedData.companyPhone) parsedData.companyPhone = p.number;
+                if (!parsedData.companyPhone) {
+                    parsedData.companyPhone = p.number;
+                } else if (!parsedData.fax) {
+                    // 2つ目の固定電話番号は自動的にFAXとする（よくある名刺レイアウト対応）
+                    parsedData.fax = p.number;
+                }
             }
         });
 

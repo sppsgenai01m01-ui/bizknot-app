@@ -35,12 +35,17 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Summary Card -->
                     <div class="bg-white p-6 rounded-lg shadow">
-                        <h2 class="text-lg font-semibold text-gray-700 mb-2">サマリー</h2>
-                        <div class="flex items-center">
-                            <i class="fas fa-address-card fa-2x text-blue-500 mr-4"></i>
-                            <div>
-                                <p class="text-gray-600">登録済み名刺数</p>
-                                <p id="summary-card-count" class="text-3xl font-bold">...</p>
+                        <h2 class="text-lg font-semibold text-gray-700 mb-4">サマリー</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="flex flex-col items-center justify-center p-2 bg-blue-50 rounded-lg">
+                                <i class="fas fa-address-card fa-2x text-blue-500 mb-2"></i>
+                                <p class="text-xs text-gray-600 font-bold">総登録数</p>
+                                <p id="summary-card-count" class="text-2xl font-bold text-gray-800">...</p>
+                            </div>
+                            <div class="flex flex-col items-center justify-center p-2 bg-green-50 rounded-lg">
+                                <i class="fas fa-calendar-check fa-2x text-green-500 mb-2"></i>
+                                <p class="text-xs text-gray-600 font-bold">今月の登録数</p>
+                                <p id="summary-month-count" class="text-2xl font-bold text-gray-800">...</p>
                             </div>
                         </div>
                     </div>

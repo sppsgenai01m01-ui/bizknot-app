@@ -70,12 +70,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 snapshot.forEach(doc => {
                     const card = doc.data();
                     const li = document.createElement('li');
-                    li.className = 'p-3 hover:bg-gray-100 rounded-md cursor-pointer border-b';
+                    li.className = 'p-3 hover:bg-gray-100 rounded-md cursor-pointer border-b transition duration-150 ease-in-out';
                     li.innerHTML = `
-                        <p class="font-semibold text-gray-800">${card.companyName || '会社名未登録'}</p>
-                        <p class="text-sm text-gray-600">${card.name || '氏名未登録'}</p>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold text-gray-800">${card.companyName || '会社名未登録'}</p>
+                                <p class="text-sm text-gray-600">${card.name || '氏名未登録'}</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </div>
                     `;
                     li.dataset.id = doc.id;
+                    li.addEventListener('click', () => {
+                        window.location.href = `/business_card_detail.html?id=${doc.id}`;
+                    });
                     recentCardsList.appendChild(li);
                 });
             }

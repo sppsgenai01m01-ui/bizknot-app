@@ -16,16 +16,68 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentUser = null;
     let cardId = new URLSearchParams(window.location.search).get('id');
 
+    let draftData = null;
+
     auth.onAuthStateChanged(user => {
         if (user) {
             currentUser = user;
             if (cardId) {
+                // 編集モード：Firestoreからデータを取得
                 loadCardData(cardId);
+            } else {
+                // 新規登録モード：SessionStorageにOCR結果があれば読み込む
+                const draftString = sessionStorage.getItem('ocrDraft');
+                if (draftString) {
+                    try {
+                        draftData = JSON.parse(draftString);
+                        populateFormFromDraft(draftData);
+                    } catch (e) {
+                        console.error("SessionStorageのパースに失敗しました", e);
+                    }
+                }
             }
         } else {
             window.location.href = 'index.html';
         }
     });
+
+    // キャンセルボタンの処理
+    const cancelButton = document.getElementById('cancel-button');
+    if (cancelButton) {
+        cancelButton.addEventListener('click', () => {
+            if (confirm('入力内容を破棄して一覧に戻りますか？')) {
+                sessionStorage.removeItem('ocrDraft');
+                window.location.href = '/dashboard.html';
+            }
+        });
+    }
+
+    // OCR推測データをフォームにセットする関数
+    function populateFormFromDraft(data) {
+        if (data.imageUrl) {
+            imagePreview.src = data.imageUrl;
+            imagePreview.classList.remove('hidden');
+            noImageText.classList.add('hidden');
+        }
+
+        const setVal = (id, val) => {
+            if (val) {
+                const el = document.getElementById(id);
+                if (el) el.value = val;
+            }
+        };
+
+        setVal('company', data.companyName);
+        setVal('department', data.department);
+        setVal('title', data.position);
+        setVal('name', data.name);
+        setVal('email', data.email);
+        setVal('company_tel', data.companyPhone);
+        setVal('mobile_tel', data.mobilePhone);
+        setVal('fax', data.fax);
+        setVal('address', data.address);
+        setVal('notes', data.memo);
+    }
 
     async function loadCardData(id) {
         try {
@@ -41,15 +93,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     noImageText.classList.add('hidden');
                 }
 
-                // フォームへの自動入力
-                if (data.companyName) document.getElementById('company').value = data.companyName;
-                if (data.department) document.getElementById('department').value = data.department;
-                if (data.position) document.getElementById('title').value = data.position;
-                if (data.name) document.getElementById('name').value = data.name;
-                if (data.email) document.getElementById('email').value = data.email;
-                if (data.phone) document.getElementById('tel').value = data.phone;
-                if (data.address) document.getElementById('address').value = data.address;
-                if (data.memo) document.getElementById('notes').value = data.memo;
+                // フォームへの自動入力（要素が存在する場合のみセットする安全な実装）
+                const setVal = (id, val) => {
+                    if (val) {
+                        const el = document.getElementById(id);
+                        if (el) el.value = val;
+                    }
+                };
+
+                setVal('company', data.companyName);
+                setVal('department', data.department);
+                setVal('title', data.position);
+                setVal('name', data.name);
+                setVal('email', data.email);
+                setVal('company_tel', data.companyPhone);
+                setVal('mobile_tel', data.mobilePhone);
+                setVal('fax', data.fax);
+                setVal('address', data.address);
+                setVal('notes', data.memo);
 
             } else {
                 console.error("名刺データが見つかりません:", id);
@@ -81,25 +142,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 department: document.getElementById('department').value.trim(),
                 position: document.getElementById('title').value.trim(),
                 name: name,
-                email: document.getElementById('email').value.trim(),
-                phone: document.getElementById('tel').value.trim(),
-                address: document.getElementById('address').value.trim(),
-                memo: document.getElementById('notes').value.trim(),
+                email: document.getElementById('email') ? document.getElementById('email').value.trim() : "",
+                companyPhone: document.getElementById('company_tel') ? document.getElementById('company_tel').value.trim() : "",
+                mobilePhone: document.getElementById('mobile_tel') ? document.getElementById('mobile_tel').value.trim() : "",
+                fax: document.getElementById('fax') ? document.getElementById('fax').value.trim() : "",
+                address: document.getElementById('address') ? document.getElementById('address').value.trim() : "",
+                memo: document.getElementById('notes') ? document.getElementById('notes').value.trim() : "",
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            try {
-                let savedCardId = cardId;
-                if (cardId) {
-                    // 更新
-                    await db.collection('businessCards').doc(cardId).update(cardData);
-                } else {
-                    // 新規作成
-                    cardData.ownerId = currentUser.uid;
-                    cardData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-                    const docRef = await db.collection('businessCards').add(cardData);
-                    savedCardId = docRef.id;
-                }
+                try {
+                    let savedCardId = cardId;
+                    if (cardId) {
+                        // 編集：更新処理
+                        await db.collection('businessCards').doc(cardId).update(cardData);
+                    } else {
+                        // 新規作成：SessionStorageに画像があれば含める
+                        cardData.ownerId = currentUser.uid;
+                        cardData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                        if (draftData && draftData.imageUrl) {
+                            cardData.imageUrl = draftData.imageUrl;
+                        }
+                        const docRef = await db.collection('businessCards').add(cardData);
+                        savedCardId = docRef.id;
+                        // 登録が完了したら一時データを削除
+                        sessionStorage.removeItem('ocrDraft');
+                    }
 
                 messageArea.textContent = '名刺情報を保存しました！完了画面へ移動します。';
                 messageArea.className = 'text-green-600 mb-4 font-bold';

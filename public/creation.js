@@ -168,76 +168,116 @@ async function uploadAndProceed(file) {
         await worker.terminate();
         console.log("OCR解析完了");
 
-        // --- 2. 抽出テキストからの簡易パース（推測ロジック） ---
+        // --- 2. 抽出テキストからの簡易パース（ゆらぎ許容ロジック） ---
         const lines = extractedText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         
         let parsedData = {
             companyName: "",
             name: "",
             email: "",
-            phone: "",
+            companyPhone: "",
+            mobilePhone: "",
+            fax: "",
             department: "",
             position: "",
-            // 【重要】最強のフェイルセーフ：読み取った全文をメモに残す
-            memo: "【OCR読み取りデータ】\n" + lines.join('\n')
+            address: "",
+            memo: ""
         };
 
         const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-        const phoneRegex = /(0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{3,4})/;
+        // ゆらぎ対応: スペースが含まれたり、ハイフンが別の記号として認識された場合も許容
+        const phoneRegex = /(0\d{1,4}[-ー\s~]?\d{1,4}[-ー\s~]?\d{3,4})/;
+        const zipRegex = /[〒T\+]\s?\d{3}[-ー]?\d{4}/i;
+
+        const unparsedLines = [];
 
         lines.forEach(line => {
-            // メールアドレス抽出
+            let matched = false;
+
+            // 1. メールアドレス
             if (!parsedData.email && emailRegex.test(line)) {
                 parsedData.email = line.match(emailRegex)[0];
+                matched = true;
             }
-            // 電話番号抽出
-            else if (!parsedData.phone && phoneRegex.test(line)) {
-                parsedData.phone = line.match(phoneRegex)[0];
+            // 2. 電話・FAX番号の細分化抽出
+            else if (phoneRegex.test(line)) {
+                const number = line.match(phoneRegex)[0].replace(/[-ー\s~]/g, '-');
+                
+                if (line.match(/fax/i)) {
+                    if (!parsedData.fax) {
+                        parsedData.fax = number;
+                        matched = true;
+                    }
+                } else if (line.match(/(携帯|mobile|090|080|070)/i) || number.startsWith('090') || number.startsWith('080') || number.startsWith('070')) {
+                    if (!parsedData.mobilePhone) {
+                        parsedData.mobilePhone = number;
+                        matched = true;
+                    }
+                } else {
+                    if (!parsedData.companyPhone) {
+                        parsedData.companyPhone = number;
+                        matched = true;
+                    }
+                }
             }
-            // 会社名抽出 (簡易判定)
-            else if (!parsedData.companyName && (line.includes('株式') || line.includes('有限') || line.includes('合同') || line.includes('Inc') || line.includes('Corp'))) {
-                parsedData.companyName = line;
+            // 3. 会社名 (ゴミ文字パージと、スペースが入った「株 式 会 社」対応)
+            else if (!parsedData.companyName && line.match(/(?:株\s*式|有\s*限|合\s*同|Inc|Corp)/i)) {
+                // 株式会社以降の文字列を抽出
+                const match = line.match(/(?:株\s*式\s*会\s*社|有\s*限\s*会\s*社|合\s*同\s*会\s*社).+/);
+                parsedData.companyName = match ? match[0].replace(/\s/g, '') : line.replace(/\s/g, '');
+                matched = true;
+            }
+            // 4. 住所 (〒の誤読や都道府県に対応)
+            else if (!parsedData.address && (zipRegex.test(line) || line.match(/(都|道|府|県|市区町村)/))) {
+                parsedData.address = line;
+                matched = true;
+            }
+            // 5. 役職・部署 (複数のキーワードでゆらぎ対応)
+            else if (!parsedData.department && !parsedData.position && line.match(/(部|課|室|代表|社長|取締役|マネージャー|チーフ|担当|CEO|CTO|CFO)/i)) {
+                parsedData.position = line;
+                matched = true;
+            }
+            // 6. 氏名 (数字・記号が含まれない、2〜10文字程度の文字列。間にスペースがあれば濃厚)
+            else if (!parsedData.name && !line.match(/[0-9a-zA-Z@,.:]/) && line.length >= 2 && line.length <= 10) {
+                if (line.includes(' ') || line.includes('　') || line.length <= 5) {
+                    parsedData.name = line;
+                    matched = true;
+                }
+            }
+
+            if (!matched) {
+                unparsedLines.push(line);
             }
         });
 
-        // --- 3. Firestore と Storage への保存 ---
-        const newCardRef = db.collection('businessCards').doc();
-        const cardId = newCardRef.id;
+        parsedData.memo = "【未分類のOCRデータ】\n" + unparsedLines.join('\n');
 
-        // 【将来の課題】デモ完了後にStorageへ移行するため、元のコードはコメントアウトして残しておく
-        // 画像のアップロード (現在は課金制約のためFirestoreへ直接Base64で保存する)
-        /*
-        const filePath = `uploads/${currentUser.uid}/${cardId}/${file.name}`;
-        const storageRef = storage.ref(filePath);
-        await storageRef.put(file);
-        const imageUrl = await storageRef.getDownloadURL();
-        */
-        
+        // --- 3. フォームへの引き継ぎ（一時保存） ---
         // 代替処理: Canvasで圧縮してBase64文字列に変換
         const compressedBase64 = await compressImage(file);
-        const imageUrl = compressedBase64; // URLの代わりにBase64文字列をそのまま使用
-
-        // FirestoreにOCRの推測結果を含めて保存
-        await newCardRef.set({
-            ownerId: currentUser.uid,
-            imageUrl: imageUrl,
+        
+        // 即時登録を廃止し、SessionStorageに一時保存してフォーム画面へ引き継ぐ
+        const draftData = {
+            imageUrl: compressedBase64,
             companyName: parsedData.companyName,
             department: parsedData.department,
             position: parsedData.position,
-            name: parsedData.name, // 誤判定を防ぐため手動入力に委ねる
+            name: parsedData.name, 
             email: parsedData.email,
-            phone: parsedData.phone,
-            address: "",
-            website: "",
-            memo: parsedData.memo, // 全文が入るため、次の画面でコピペしやすい
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+            companyPhone: parsedData.companyPhone,
+            mobilePhone: parsedData.mobilePhone,
+            fax: parsedData.fax,
+            address: parsedData.address,
+            memo: parsedData.memo
+        };
+
+        sessionStorage.setItem('ocrDraft', JSON.stringify(draftData));
 
         isCompleted = true;
         clearTimeout(timeoutId);
 
-        // 4. 次の画面（フォーム入力画面）にIDを渡して遷移
-        window.location.href = `/business_card_form.html?id=${cardId}`;
+        // 4. フォーム入力画面へ遷移（IDなし＝新規登録モード）
+        window.location.href = `/business_card_form.html`;
 
     } catch (error) {
         isCompleted = true;

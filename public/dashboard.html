@@ -12,10 +12,11 @@
     <!-- Header -->
     <header class="bg-white shadow-md">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-gray-800">BizKnot</h1>
-            <div class="flex items-center">
-                <span id="user-display-name" class="text-gray-700 mr-4">ようこそ、<span class="font-semibold">ゲスト</span>さん</span>
-                <button id="logout-button" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+            <h1 class="text-2xl font-bold text-blue-800">BizKnot</h1>
+            <div class="flex items-center space-x-4">
+                <span id="user-display-name" class="text-gray-700 hidden md:inline">ようこそ、<span class="font-semibold">ゲスト</span>さん</span>
+                <a href="/settings.html" class="text-gray-600 hover:text-blue-600 font-semibold transition">設定</a>
+                <button id="logout-button" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition">
                     ログアウト
                 </button>
             </div>

@@ -122,22 +122,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-    <!-- Firebase Initialization -->
-    <script>
-      const firebaseConfig = {
-        apiKey: "AIzaSyDGYmSxCNuf5bpZfQe5e-T0bvUXkU6zXfg",
-        authDomain: "bizknot-asever.firebaseapp.com",
-        projectId: "bizknot-asever",
-        storageBucket: "bizknot-asever.firebasestorage.app",
-        messagingSenderId: "103308146429",
-        appId: "1:103308146429:web:474099dc997f0dc85b3094",
-        measurementId: "G-HS0D118SW1"
-      };
-      // Initialize Firebase
-      if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-      }
-    </script>
+    <!-- Firebase Initialization & Common Logic -->
+    <script src="/app.js"></script>
     <script src="dashboard.js"></script>
 
 </body>

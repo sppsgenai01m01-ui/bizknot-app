@@ -24,16 +24,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const db = firebase.firestore();
 
     // --- Authentication State Observer ---
-    firebase.auth().onAuthStateChanged(user => {
-        if (user) {
+    if (typeof protectPage === 'function') {
+        protectPage((user) => {
             console.log("ログイン済みのユーザーです: ", user.uid);
             fetchUserData(user);
             fetchDashboardData();
-        } else {
-            console.log("未ログインのユーザーです。ログインページにリダイレクトします。");
-            window.location.href = 'index.html';
-        }
-    });
+        });
+    } else {
+        console.error("app.js が読み込まれていません。");
+        window.location.href = 'index.html';
+    }
 
     // --- Data Fetching Functions ---
     function fetchUserData(user) {

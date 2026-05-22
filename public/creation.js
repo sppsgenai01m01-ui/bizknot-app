@@ -193,22 +193,24 @@ async function uploadAndProceed(file) {
 
         lines.forEach(line => {
             let matched = false;
+            // 全角・半角スペースを除去したクリーンな行
+            const cleanLine = line.replace(/[\s　]/g, '');
 
             // 1. メールアドレス
-            if (!parsedData.email && emailRegex.test(line)) {
-                parsedData.email = line.match(emailRegex)[0];
+            if (!parsedData.email && emailRegex.test(cleanLine)) {
+                parsedData.email = cleanLine.match(emailRegex)[0];
                 matched = true;
             }
             // 2. 電話・FAX番号の細分化抽出
-            else if (phoneRegex.test(line)) {
-                const number = line.match(phoneRegex)[0].replace(/[-ー\s~]/g, '-');
+            else if (phoneRegex.test(cleanLine)) {
+                const number = cleanLine.match(phoneRegex)[0].replace(/[-ー\s~]/g, '-');
                 
-                if (line.match(/fax/i)) {
+                if (cleanLine.match(/fax/i)) {
                     if (!parsedData.fax) {
                         parsedData.fax = number;
                         matched = true;
                     }
-                } else if (line.match(/(携帯|mobile|090|080|070)/i) || number.startsWith('090') || number.startsWith('080') || number.startsWith('070')) {
+                } else if (cleanLine.match(/(携帯|mobile|090|080|070)/i) || number.startsWith('090') || number.startsWith('080') || number.startsWith('070')) {
                     if (!parsedData.mobilePhone) {
                         parsedData.mobilePhone = number;
                         matched = true;
@@ -221,26 +223,30 @@ async function uploadAndProceed(file) {
                 }
             }
             // 3. 会社名 (ゴミ文字パージと、スペースが入った「株 式 会 社」対応)
-            else if (!parsedData.companyName && line.match(/(?:株\s*式|有\s*限|合\s*同|Inc|Corp)/i)) {
+            else if (!parsedData.companyName && cleanLine.match(/(?:株式|有限|合同|Inc|Corp)/i)) {
                 // 株式会社以降の文字列を抽出
-                const match = line.match(/(?:株\s*式\s*会\s*社|有\s*限\s*会\s*社|合\s*同\s*会\s*社).+/);
-                parsedData.companyName = match ? match[0].replace(/\s/g, '') : line.replace(/\s/g, '');
+                const match = cleanLine.match(/(?:株式会社|有限会社|合同会社).+/);
+                parsedData.companyName = match ? match[0] : cleanLine;
                 matched = true;
             }
             // 4. 住所 (〒の誤読や都道府県に対応)
-            else if (!parsedData.address && (zipRegex.test(line) || line.match(/(都|道|府|県|市区町村)/))) {
-                parsedData.address = line;
+            else if (!parsedData.address && (zipRegex.test(cleanLine) || cleanLine.match(/(都|道|府|県|市区町村)/))) {
+                parsedData.address = cleanLine.replace(/^(?:.*住所[:：])?(?:.*〒)?([0-9]{3}[-ー][0-9]{4})?/, '〒$1 ');
+                if(!parsedData.address.includes('〒')) {
+                    parsedData.address = cleanLine.replace(/^.*(?:住所[:：])?/, '');
+                }
                 matched = true;
             }
             // 5. 役職・部署 (複数のキーワードでゆらぎ対応)
-            else if (!parsedData.department && !parsedData.position && line.match(/(部|課|室|代表|社長|取締役|マネージャー|チーフ|担当|CEO|CTO|CFO)/i)) {
+            else if (!parsedData.department && !parsedData.position && cleanLine.match(/(部|課|室|代表|社長|取締役|マネージャー|チーフ|担当|CEO|CTO|CFO)/i)) {
                 parsedData.position = line;
                 matched = true;
             }
-            // 6. 氏名 (数字・記号が含まれない、2〜10文字程度の文字列。間にスペースがあれば濃厚)
-            else if (!parsedData.name && !line.match(/[0-9a-zA-Z@,.:]/) && line.length >= 2 && line.length <= 10) {
-                if (line.includes(' ') || line.includes('　') || line.length <= 5) {
-                    parsedData.name = line;
+            // 6. 氏名 (数字・記号が含まれない、2〜20文字程度の文字列)
+            else if (!parsedData.name && !cleanLine.match(/[0-9@,.:]/) && cleanLine.length >= 2 && cleanLine.length <= 20) {
+                let nameCandidate = line.replace(/(代表取締役|社長|役員|執行役員|本部長|事業部長|部長|次長|課長|係長|主任)/g, '').trim();
+                if (nameCandidate.length >= 2) {
+                    parsedData.name = nameCandidate;
                     matched = true;
                 }
             }
@@ -250,7 +256,8 @@ async function uploadAndProceed(file) {
             }
         });
 
-        parsedData.memo = "【未分類のOCRデータ】\n" + unparsedLines.join('\n');
+        // 意味不明なゴミデータが入るため、未分類OCRデータのメモへの強制入力を廃止
+        parsedData.memo = "";
 
         // --- 3. フォームへの引き継ぎ（一時保存） ---
         // 代替処理: Canvasで圧縮してBase64文字列に変換

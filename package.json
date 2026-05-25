@@ -1,0 +1,22 @@
+{
+  "name": "bizknot-app",
+  "version": "1.0.0",
+  "description": "BizKnot用のリポジトリ",
+  "main": "playwright.config.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "@playwright/test": "^1.60.0",
+    "serve": "^14.2.6",
+    "vitest": "^4.1.7"
+  }
+}

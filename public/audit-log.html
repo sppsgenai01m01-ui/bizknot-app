@@ -8,14 +8,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BizKnot - 監査ログ</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
-    <div class="text-center">
-        <h1 class="text-3xl font-bold text-gray-700">監査ログ画面</h1>
-        <p class="text-xl text-gray-500 mt-4">現在作成中です。</p>
-        <div class="mt-8">
-            <a href="dashboard.html" class="text-blue-500 hover:underline">ダッシュボードに戻る</a>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-white shadow-md">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-blue-800">監査ログ</h1>
+            <a href="/dashboard.html" class="text-gray-600 hover:text-blue-600 font-semibold transition">ダッシュボードに戻る</a>
         </div>
-    </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 class="text-lg font-semibold text-gray-700">システム操作履歴</h2>
+                <button id="export-audit-csv" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm shadow flex items-center">
+                    <i class="fas fa-file-csv mr-2"></i> CSV出力
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 text-sm">
+                            <th class="p-3 border-b">日時</th>
+                            <th class="p-3 border-b">ユーザーEmail</th>
+                            <th class="p-3 border-b">アクション種別</th>
+                            <th class="p-3 border-b">詳細情報 (JSON)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-list-body">
+                        <!-- 動的に挿入 -->
+                    </tbody>
+                </table>
+                <div id="loading-spinner" class="text-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="/app.js"></script>
+    <script src="/audit-log.js"></script>
 </body>
 </html>

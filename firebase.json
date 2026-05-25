@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "emulators": {
     "auth": {
       "port": 9099
@@ -11,6 +12,15 @@
     },
     "ui": {
       "enabled": true
+=======
+  "hosting": {
+    "public": "public",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8080
+>>>>>>> feature/ocr-implementation
     }
   }
 }

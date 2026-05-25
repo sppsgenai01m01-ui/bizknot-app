@@ -12,6 +12,8 @@
 </head>
 <body>
     <header>
+<body class="bg-gray-100">
+    <header class="bg-white shadow-sm p-4">
         <h1>BizKnot</h1>
         <nav>
             <a href="dashboard.html">ダッシュボード</a>
@@ -21,62 +23,97 @@
         </nav>
     </header>
 
-    <main>
-        <div class="card">
-            <h2>新しい名刺を登録</h2>
-            <p>名刺の情報を手で入力して登録します。</p>
+    <main class="container mx-auto p-4 md:p-8">
+        
+        <div class="flex justify-between items-end mb-4">
+            <h2 class="text-2xl font-bold text-gray-800">名刺情報入力</h2>
+        </div>
 
-            <div id="message-area"></div>
+        <!-- エラー・成功メッセージ表示エリア -->
+        <div id="message-area" class="text-red-500 mb-4 font-bold"></div>
 
-            <form id="card-form">
-                <fieldset>
-                    <legend>企業・組織情報</legend>
-                    <div class="form-group">
-                        <label for="company">会社名・組織名<span class="required">*</span></label>
-                        <input type="text" id="company" name="company" required placeholder="例）株式会社BizKnot">
-                    </div>
-                    <div class="form-group">
-                        <label for="department">部署名</label>
-                        <input type="text" id="department" name="department" placeholder="例）営業部">
-                    </div>
-                    <div class="form-group">
-                        <label for="title">役職</label>
-                        <input type="text" id="title" name="title" placeholder="例）マネージャー">
-                    </div>
-                </fieldset>
-
-                <fieldset>
-                    <legend>担当者情報</legend>
-                    <div class="form-group">
-                        <label for="name">氏名<span class="required">*</span></label>
-                        <input type="text" id="name" name="name" required placeholder="例）山田 太郎">
-                    </div>
-                    <div class="form-group">
-                        <label for="email">メールアドレス</label>
-                        <input type="email" id="email" name="email" placeholder="例）yamada.taro@example.com">
-                    </div>
-                    <div class="form-group">
-                        <label for="tel">電話番号</label>
-                        <input type="tel" id="tel" name="tel" placeholder="例）090-1234-5678">
-                    </div>
-                    <div class="form-group">
-                        <label for="address">住所</label>
-                        <input type="text" id="address" name="address" placeholder="例）東京都千代田区丸の内1-1-1">
-                    </div>
-                </fieldset>
-
-                <fieldset>
-                    <legend>その他</legend>
-                    <div class="form-group">
-                        <label for="notes">メモ</label>
-                        <textarea id="notes" name="notes" rows="4" placeholder="打ち合わせ日：2023/10/26&#10;特記事項：XXXXの件"></textarea>
-                    </div>
-                </fieldset>
-
-                <div class="form-actions">
-                    <button type="submit" id="submit-button">この内容で登録する</button>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- 左側：画像プレビューエリア -->
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col items-center justify-center min-h-[300px]">
+                <h3 class="text-lg font-bold text-gray-700 mb-4 w-full text-left border-b pb-2">読み込んだ名刺画像</h3>
+                <div class="w-full flex items-center justify-center bg-gray-50 rounded-lg p-2 border border-gray-200" style="min-height: 250px;">
+                    <img id="image-preview" src="" alt="名刺画像プレビュー" class="max-w-full max-h-[400px] object-contain rounded hidden">
+                    <p id="no-image-text" class="text-gray-400 font-semibold">画像がありません</p>
                 </div>
-            </form>
+                <p class="text-sm text-gray-500 mt-4 text-left w-full"><i class="fas fa-info-circle mr-1"></i>画像を見ながら右側のフォームを修正してください。</p>
+            </div>
+
+            <!-- 右側：入力フォーム -->
+            <div class="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                <form id="card-form" class="space-y-6">
+                    <fieldset>
+                        <legend class="text-lg font-bold text-gray-700 mb-4">企業・組織情報</legend>
+                        <div class="form-group">
+                            <label for="company">会社名・組織名<span class="required">*</span></label>
+                            <input type="text" id="company" name="company" required placeholder="例）株式会社BizKnot">
+                        </div>
+                        <div class="form-group">
+                            <label for="department">部署名</label>
+                            <input type="text" id="department" name="department" placeholder="例）営業部">
+                        </div>
+                        <div class="form-group">
+                            <label for="title">役職</label>
+                            <input type="text" id="title" name="title" placeholder="例）マネージャー">
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend class="text-lg font-bold text-gray-700 mb-4">担当者情報</legend>
+                        <div class="form-group">
+                            <label for="name">氏名<span class="required">*</span></label>
+                            <input type="text" id="name" name="name" required placeholder="例）山田 太郎">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">メールアドレス</label>
+                            <input type="email" id="email" name="email" placeholder="例）yamada.taro@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="company_tel">会社TEL</label>
+                            <input type="tel" id="company_tel" name="company_tel" placeholder="例）03-1234-5678">
+                        </div>
+                        <div class="form-group">
+                            <label for="mobile_tel">携帯TEL</label>
+                            <input type="tel" id="mobile_tel" name="mobile_tel" placeholder="例）090-1234-5678">
+                        </div>
+                        <div class="form-group">
+                            <label for="fax">FAX</label>
+                            <input type="tel" id="fax" name="fax" placeholder="例）03-1234-5679">
+                        </div>
+                        <div class="form-group">
+                            <label for="address">住所</label>
+                            <input type="text" id="address" name="address" placeholder="例）東京都千代田区丸の内1-1-1">
+                        </div>
+                    </fieldset>
+
+                    <fieldset id="custom-fields-container" class="hidden">
+                        <legend class="text-lg font-bold text-gray-700 mb-4">追加項目</legend>
+                        <div id="custom-fields-wrapper" class="space-y-6"></div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend class="text-lg font-bold text-gray-700 mb-4">その他</legend>
+                        <div class="form-group">
+                            <label for="notes">メモ</label>
+                            <textarea id="notes" name="notes" rows="4" placeholder="打ち合わせ日：2023/10/26&#10;特記事項：XXXXの件"></textarea>
+                        </div>
+                    </fieldset>
+
+                    <!-- Submit & Cancel Buttons -->
+                    <div class="pt-4 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                        <button type="submit" id="submit-button" class="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 shadow-md transition duration-200">
+                            この内容で登録する
+                        </button>
+                        <button type="button" id="cancel-button" class="flex-1 bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-lg hover:bg-gray-400 shadow-md transition duration-200">
+                            キャンセル
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </main>
 

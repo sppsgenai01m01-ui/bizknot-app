@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userDisplayName = document.getElementById('user-display-name');
     const logoutButton = document.getElementById('logout-button');
     const summaryCardCount = document.getElementById('summary-card-count');
+    const summaryMonthCount = document.getElementById('summary-month-count');
     const recentCardsList = document.getElementById('recent-cards-list');
     const recentCardsListSkeleton = document.getElementById('recent-cards-list-skeleton');
     const adminMenu = document.getElementById('admin-menu');
@@ -23,16 +24,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const db = firebase.firestore();
 
     // --- Authentication State Observer ---
-    firebase.auth().onAuthStateChanged(user => {
-        if (user) {
+    if (typeof protectPage === 'function') {
+        protectPage((user) => {
             console.log("ログイン済みのユーザーです: ", user.uid);
             fetchUserData(user);
             fetchDashboardData();
-        } else {
-            console.log("未ログインのユーザーです。ログインページにリダイレクトします。");
-            window.location.href = 'index.html';
-        }
-    });
+        });
+    } else {
+        console.error("app.js が読み込まれていません。");
+        window.location.href = 'index.html';
+    }
 
     // --- Data Fetching Functions ---
     function fetchUserData(user) {
@@ -56,28 +57,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fetchDashboardData() {
         db.collection('businessCards').get().then(snapshot => {
-            summaryCardCount.textContent = snapshot.size;
+            let totalCount = 0;
+            let monthCount = 0;
+            
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (!data.deletedAt) {
+                    totalCount++;
+                    // 今月の登録数をカウント
+                    if (data.createdAt) {
+                        let createdAtDate = null;
+                        if (typeof data.createdAt.toDate === 'function') {
+                            createdAtDate = data.createdAt.toDate();
+                        } else {
+                            createdAtDate = new Date(data.createdAt);
+                        }
+                        
+                        if (createdAtDate && createdAtDate >= startOfMonth) {
+                            monthCount++;
+                        }
+                    }
+                }
+            });
+            summaryCardCount.textContent = totalCount;
+            if (summaryMonthCount) summaryMonthCount.textContent = monthCount;
         }).catch(error => {
-            console.error("名刺総数の取得に失敗しました:", error);
+            console.error("名刺統計の取得に失敗しました:", error);
             summaryCardCount.textContent = 'N/A';
+            if (summaryMonthCount) summaryMonthCount.textContent = 'N/A';
         });
 
-        db.collection('businessCards').orderBy('createdAt', 'desc').limit(5).get().then(snapshot => {
+        // 論理削除をフィルタリングするため多めに取得
+        db.collection('businessCards').orderBy('createdAt', 'desc').limit(20).get().then(snapshot => {
             recentCardsList.innerHTML = '';
             if (snapshot.empty) {
                 recentCardsList.innerHTML = '<p class="text-gray-500">まだ名刺は登録されていません。</p>';
             } else {
+                let displayedCount = 0;
                 snapshot.forEach(doc => {
                     const card = doc.data();
+                    if (card.deletedAt) return; // 論理削除スキップ
+                    if (displayedCount >= 5) return; // 5件まで
+                    displayedCount++;
+
                     const li = document.createElement('li');
-                    li.className = 'p-3 hover:bg-gray-100 rounded-md cursor-pointer border-b';
+                    li.className = 'p-3 hover:bg-gray-100 rounded-md cursor-pointer border-b transition duration-150 ease-in-out';
                     li.innerHTML = `
-                        <p class="font-semibold text-gray-800">${card.companyName || '会社名未登録'}</p>
-                        <p class="text-sm text-gray-600">${card.personName || '氏名未登録'}</p>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold text-gray-800">${card.companyName || '会社名未登録'}</p>
+                                <p class="text-sm text-gray-600">${card.name || '氏名未登録'}</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </div>
                     `;
                     li.dataset.id = doc.id;
+                    li.addEventListener('click', () => {
+                        window.location.href = `/business_card_detail.html?id=${doc.id}`;
+                    });
                     recentCardsList.appendChild(li);
                 });
+                
+                if (displayedCount === 0) {
+                    recentCardsList.innerHTML = '<p class="text-gray-500">まだ名刺は登録されていません。</p>';
+                }
             }
             recentCardsListSkeleton.classList.add('hidden');
             recentCardsList.classList.remove('hidden');
@@ -99,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CORRECTED Navigation button listeners ---
     if (addCardButton) {
         console.log("「名刺登録」ボタンが見つかりました。クリックイベントを設定します。");
-        addCardButton.addEventListener('click', () => { window.location.href = 'business_card_form.html'; });
+        addCardButton.addEventListener('click', () => { window.location.href = 'business_card_creation.html'; });
     } else {
         console.error("致命的エラー: 「名刺登録」ボタン(id='add-card-button')がHTML内に見つかりません。");
     }

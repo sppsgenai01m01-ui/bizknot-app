@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-\n// このファイルは app.js の後に読み込まれる想定です。\n// app.jsで初期化済みのfirebaseオブジェクトを使用します。\n\nprotectPage((user) => {\n    // --- DOM要素 --- \n    const userNameDisplay = document.getElementById('user-name-display');\n    const cardListContainer = document.getElementById('card-list-container');\n    const loadMoreButton = document.getElementById('load-more-button');\n    const searchButton = document.getElementById('search-button');\n    const searchKeyword = document.getElementById('search-keyword');\n\n    // --- グローバル変数 --- \n    const db = firebase.firestore();\n    let lastVisibleDoc = null; // ページネーション用\n    let currentKeyword = '';   // 現在の検索キーワード\n    const CARDS_PER_PAGE = 10; // 1ページあたりの表示件数\n\n    // --- 初期表示 --- \n    if (userNameDisplay) {\n        userNameDisplay.textContent = user.displayName || 'ゲスト';\n    }\n    fetchCards(true); // 最初のカードリストを読み込み\n\n    // --- 関数定義 --- \n\n    /**\n     * Firestoreから名刺データを取得して画面に表示する\n     * @param {boolean} isInitialLoad - 初期読み込みかどうか\n     * @param {string} keyword - 検索キーワード\n     */\n    async function fetchCards(isInitialLoad = false, keyword = '') {\n        if (isInitialLoad) {\n            cardListContainer.innerHTML = ''; // コンテナをクリア\n            lastVisibleDoc = null;\n        }\n\n        showLoading(true);\n\n        try {\n            let query = db.collection('business_cards')\n                        .where('user_id', '==', user.uid)\n                        .where('isDeleted', '!=', true); // 論理削除されていないもののみ取得\n\n            // ▼▼▼ 検索ロジックを前方一致検索に変更 ▼▼▼\n            if (keyword) {\n                // 'name'フィールドで前方一致検索\n                query = query.where('name', '>=', keyword)\n                             .where('name', '<=', keyword + '\\uf8ff')\n                             .orderBy('name'); // 前方一致検索では、そのフィールドでの並べ替えが必須\n            } else {\n                // キーワードがない場合は、作成日時の降順で並び替える\n                query = query.orderBy('createdAt', 'desc');\n            }\n            // ▲▲▲ 変更ここまで ▲▲▲\n\n            // ページネーション\n            if (lastVisibleDoc && !isInitialLoad) {\n                query = query.startAfter(lastVisibleDoc);\n            }\n            \n            query = query.limit(CARDS_PER_PAGE);\n\n            const snapshot = await query.get();\n\n            if (snapshot.empty && isInitialLoad) {\n                cardListContainer.innerHTML = '<p class=\"col-span-full text-center text-gray-500\">該当する名刺は見つかりませんでした。</p>';\n                loadMoreButton.classList.add('hidden');\n                showLoading(false);\n                return;\n            }\n            \n            if (isInitialLoad && cardListContainer.querySelector('.animate-pulse')) {\n                cardListContainer.innerHTML = '';\n            }\n\n            snapshot.forEach(doc => {\n                const cardElement = createCardElement(doc.id, doc.data());\n                cardListContainer.appendChild(cardElement);\n            });\n\n            lastVisibleDoc = snapshot.docs[snapshot.docs.length - 1];\n\n            if(snapshot.docs.length < CARDS_PER_PAGE){\n                loadMoreButton.classList.add('hidden');\n            } else {\n                loadMoreButton.classList.remove('hidden');\n            }\n\n        } catch (error) {\n            console.error(\"Error fetching cards: \", error);\n            if (error.code === 'failed-precondition') {\n                // Firestoreがインデックスの作成を要求している場合のエラーハンドリング\n                const indexCreationUrl = error.message.match(/(https?:\/\/[^\\s]*)/);\n                let errorMessage = '検索を実行するには、データベースのインデックス作成が必要です。';\n                if (indexCreationUrl && indexCreationUrl[0]) {\n                    errorMessage += `<br><a href=\"${indexCreationUrl[0]}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-blue-600 hover:underline\">こちらのリンクをクリックしてインデックスを作成してください。</a><br>作成には数分かかる場合があります。`;\n                } else {\n                     errorMessage += 'Firebaseコンソールで手動でインデックスを作成してください。'\n                }\n                cardListContainer.innerHTML = `<p class=\"col-span-full text-center text-red-500\">${errorMessage}</p>`;\n\n            } else {\n                cardListContainer.innerHTML = '<p class=\"col-span-full text-center text-red-500\">データの読み込みに失敗しました。コンソールを確認してください。</p>';\n            }\n        } finally {\n            showLoading(false);\n        }\n    }\n\n    /**\n     * 名刺カードのHTML要素を作成する\n     */\n    function createCardElement(id, data) {\n        const cardLink = document.createElement('a');\n        cardLink.href = `/business_card_detail.html?id=${id}`;\n        cardLink.className = \"block bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow duration-200\";\n        cardLink.innerHTML = `\n            <div class=\"p-2\">\n                <p class=\"text-sm text-gray-600 truncate\">${data.company || ''}</p>\n                <h3 class=\"font-bold text-lg truncate\">${data.name || ''}</h3>\n                <p class=\"text-sm text-gray-500 truncate\">${data.department || ''}</p>\n            </div>\n        `;\n        return cardLink;\n    }\n\n    /**\n     * 読み込みボタンの状態を更新する\n     */\n    function showLoading(isLoading) {\n        if (isLoading) {\n            loadMoreButton.disabled = true;\n            loadMoreButton.textContent = '読み込み中...';\n        } else {\n            loadMoreButton.disabled = false;\n            loadMoreButton.textContent = 'もっと見る';\n        }\n    }\n\n    // --- イベントリスナー --- \n\n    searchButton.addEventListener('click', () => {\n        currentKeyword = searchKeyword.value;\n        fetchCards(true, currentKeyword);\n    });\n    \n    searchKeyword.addEventListener('keydown', (event) => {\n        if (event.key === 'Enter') {\n            currentKeyword = searchKeyword.value;\n            fetchCards(true, currentKeyword);\n        }\n    });\n\n    loadMoreButton.addEventListener('click', () => {\n        fetchCards(false, currentKeyword);\n    });\n});\n
-=======
 document.addEventListener('DOMContentLoaded', () => {
     const db = firebase.firestore();
     const cardListContainer = document.getElementById('card-list-container');
@@ -114,6 +111,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // XSS対策：悪意のあるスクリプトタグなどを無害化する（サニタイズ）
+        const escapeHTML = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
         nextBatch.forEach(card => {
             const el = document.createElement('a');
             el.href = `/business_card_detail.html?id=${card.id}`;
@@ -121,14 +121,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const imgSrc = card.imageUrl ? card.imageUrl : "https://placehold.jp/300x150.png?text=No+Image";
             
+            // 取得したデータを安全に表示（エスケープ処理）
             el.innerHTML = `
                 <div class="h-40 bg-gray-100 overflow-hidden border-b border-gray-100 relative">
-                    <img src="${imgSrc}" alt="名刺画像" class="w-full h-full object-cover">
+                    <img src="${escapeHTML(imgSrc)}" alt="名刺画像" class="w-full h-full object-cover">
                 </div>
                 <div class="p-5">
-                    <p class="text-xs text-blue-600 font-bold mb-1 truncate">${card.companyName || '会社名未登録'}</p>
-                    <h3 class="font-bold text-xl text-gray-800 truncate mb-1">${card.name || '氏名未登録'}</h3>
-                    <p class="text-xs text-gray-500 truncate">${[card.department, card.position].filter(Boolean).join(' ') || '部署・役職未登録'}</p>
+                    <p class="text-xs text-blue-600 font-bold mb-1 truncate">${escapeHTML(card.companyName || '会社名未登録')}</p>
+                    <h3 class="font-bold text-xl text-gray-800 truncate mb-1">${escapeHTML(card.name || '氏名未登録')}</h3>
+                    <p class="text-xs text-gray-500 truncate">${escapeHTML([card.department, card.position].filter(Boolean).join(' ') || '部署・役職未登録')}</p>
                 </div>
             `;
             cardListContainer.appendChild(el);
@@ -173,9 +174,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loadMoreCards();
     }
 
-    // CSVエクスポート実行
-    function exportCsv() {
-        // 未ロード分も含め、現在のフィルタ条件に合致する「全件」を出力対象とする
+    // CSVエクスポート実行（単体テスト済みのモジュールを呼び出す）
+    async function exportCsv() {
+        // 画面の見た目だけでなく、フィルタ条件に合致する「全件（未ロード分含む）」を出力
         const targetData = currentFilteredCards && currentFilteredCards.length > 0 ? currentFilteredCards : allCards;
 
         if (!targetData || targetData.length === 0) {
@@ -183,58 +184,46 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // BOM付きUTF-8で文字化け防止
-        const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-        
-        // ヘッダー行の固定化
-        const headers = ['氏名', '会社名', '部署名', '役職', '電話番号', '携帯電話', 'FAX', 'Email', '住所', '登録日時', 'メモ'];
-        let csvContent = headers.join(',') + '\n';
+        try {
+            // テスト済みの共通ロジックを動的インポート
+            const { generateCsvString } = await import('./utils/csvExporter.js');
+            
+            // csvExporter.js が期待するフォーマット（氏名, 会社, 部署, 電話, メール, 登録日）にデータを変換
+            const mappedData = targetData.map(card => {
+                let createdAtStr = "";
+                if (card.createdAt && card.createdAt.toMillis) {
+                    createdAtStr = new Date(card.createdAt.toMillis()).toISOString();
+                } else if (card.createdAt) {
+                    createdAtStr = card.createdAt;
+                }
 
-        // サニタイズ関数（CSV Injection対策）
-        const sanitize = (str) => {
-            if (!str) return '""';
-            let cleanStr = String(str).replace(/"/g, '""'); // ダブルクォートのエスケープ
-            // 先頭が =, +, -, @ または制御文字の場合はシングルクォートを付与
-            if (/^[=+\-@\u202E]/.test(cleanStr)) {
-                cleanStr = "'" + cleanStr;
-            }
-            return `"${cleanStr}"`;
-        };
+                return {
+                    name: card.name,
+                    company: card.companyName,
+                    department: [card.department, card.position].filter(Boolean).join(' '),
+                    phone: card.companyPhone || card.mobilePhone || card.fax,
+                    email: card.email,
+                    createdAt: createdAtStr
+                };
+            });
 
-        // データ行
-        targetData.forEach(card => {
-            let createdAtStr = "";
-            if (card.createdAt && card.createdAt.toMillis) {
-                createdAtStr = new Date(card.createdAt.toMillis()).toLocaleString();
-            } else if (card.createdAt) {
-                createdAtStr = new Date(card.createdAt).toLocaleString();
-            }
-
-            const row = [
-                sanitize(card.name),
-                sanitize(card.companyName),
-                sanitize(card.department),
-                sanitize(card.position),
-                sanitize(card.companyPhone),
-                sanitize(card.mobilePhone),
-                sanitize(card.fax),
-                sanitize(card.email),
-                sanitize(card.address),
-                sanitize(createdAtStr),
-                sanitize(card.memo)
-            ];
-            csvContent += row.join(',') + '\n';
-        });
-
-        // ダウンロード処理
-        const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const dateStr = new Date().toISOString().slice(0, 10);
-        a.download = `bizknot_cards_${dateStr}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+            // 文字列変換 (サニタイズ処理、BOM付与、ヘッダー固定化が自動で行われる)
+            const csvContent = generateCsvString(mappedData);
+            
+            // ダウンロード処理
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const dateStr = new Date().toISOString().slice(0, 10);
+            a.download = `bizknot_cards_${dateStr}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+        } catch (error) {
+            console.error("CSVエクスポートに失敗しました:", error);
+            alert("CSVの生成中にエラーが発生しました。");
+        }
     }
 
     // イベントバインド
@@ -251,4 +240,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
->>>>>>> feature/ocr-implementation

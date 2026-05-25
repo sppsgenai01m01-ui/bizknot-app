@@ -1,4 +1,3 @@
-
 // Firebase SDK の初期化
 const firebaseConfig = {
     apiKey: "AIzaSyDGYmSxCNuf5bpZfQe5e-T0bvUXkU6zXfg",
@@ -88,17 +87,21 @@ function setupDragAndDrop() {
     });
 }
 
-// シャッターボタンのイベント
+// シャッターボタンのイベント（ファイル名欠落バグを修正）
 shutterButton.addEventListener('click', () => {
     const canvas = document.createElement('canvas');
     canvas.width = videoElement.videoWidth;
     canvas.height = videoElement.videoHeight;
     canvas.getContext('2d').drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob(handleFile, 'image/jpeg');
+    canvas.toBlob((blob) => {
+        // カメラ撮影時は元々のファイル名が存在しないため、ダミーのファイル名を付与
+        blob.name = `camera_capture_${Date.now()}.jpg`;
+        handleFile(blob);
+    }, 'image/jpeg');
 });
 
-// ファイル処理とバリデーション
-function handleFile(file) {
+// ファイル処理とバリデーション（EXIF自動回転対応版）
+async function handleFile(file) {
     if (!file) return;
 
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
@@ -113,13 +116,29 @@ function handleFile(file) {
         return;
     }
 
-    uploadAndProceed(file);
-}
-
-// アップロードと画面遷移 (バックエンド呼び出しを削除したバージョン)
-async function uploadAndProceed(file) {
     loadingOverlay.classList.remove('hidden');
 
+    try {
+        // 先ほど作成した回転補正ロジックを動的にインポートして画像を補正
+        const { processImage } = await import('./utils/imageProcessor.js');
+        const processedFile = await processImage(file);
+        
+        // Canvasによる補正が行われた場合、Blobにはnameプロパティが消えるため元の名前を再付与
+        if (!processedFile.name) {
+            processedFile.name = file.name || `image_${Date.now()}.jpg`;
+        }
+        
+        await uploadAndProceed(processedFile);
+    } catch (error) {
+        console.error("画像処理エラー:", error);
+        // 万が一エラーが起きても、元のファイルで処理を続行する（安全設計）
+        if (!file.name) file.name = `image_${Date.now()}.jpg`;
+        await uploadAndProceed(file);
+    }
+}
+
+// アップロードと画面遷移
+async function uploadAndProceed(file) {
     try {
         // 1. Firestoreで新しいドキュメントIDを生成
         const newCardRef = db.collection('businessCards').doc();
@@ -134,8 +153,8 @@ async function uploadAndProceed(file) {
         // 3. Firestoreに、手動入力用の初期データを保存
         await newCardRef.set({
             ownerId: currentUser.uid,
-            imageUrl: imageUrl, // アップロードした画像のURL
-            companyName: "", // 以下、手動で入力する項目
+            imageUrl: imageUrl, 
+            companyName: "", 
             department: "",
             position: "",
             name: "",

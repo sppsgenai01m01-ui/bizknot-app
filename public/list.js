@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchAllCards() {
         if (!cardListContainer) return;
         
-        // ローディング表示
         cardListContainer.innerHTML = `
             <div class="col-span-full text-center py-12">
                 <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
@@ -54,8 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         try {
-            // ※注意: FirestoreはRDBのような柔軟なLIKE検索ができないため、
-            // MVP版として全件取得し、JavaScript側で複数条件フィルタリングを行う設計とする
             const snapshot = await db.collection('businessCards').orderBy('createdAt', 'desc').get();
             
             allCards = [];
@@ -69,10 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
             displayedCount = 0;
             cardListContainer.innerHTML = '';
             
-            // 初回のN件を描画
             loadMoreCards();
-            
-            // 無限スクロールの監視開始
             setupIntersectionObserver();
             
         } catch (error) {
@@ -98,14 +92,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!cardListContainer) return;
         
         if (displayedCount >= currentFilteredCards.length) {
-            // すべて表示済み
             if (loadingMoreSpinner) loadingMoreSpinner.classList.add('hidden');
             return;
         }
 
         if (loadingMoreSpinner) loadingMoreSpinner.classList.remove('hidden');
 
-        // 表示すべき次のバッチを取得
         const nextBatch = currentFilteredCards.slice(displayedCount, displayedCount + CARDS_PER_PAGE);
         
         if (displayedCount === 0 && nextBatch.length === 0) {
@@ -159,12 +151,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const address = searchAddress.value.toLowerCase();
 
         currentFilteredCards = allCards.filter(card => {
-            // 基本キーワード（会社名 or 氏名）
             const matchKeyword = !keyword || 
                 (card.name && card.name.toLowerCase().includes(keyword)) ||
                 (card.companyName && card.companyName.toLowerCase().includes(keyword));
             
-            // 詳細検索
             const matchDep = !dep || 
                 (card.department && card.department.toLowerCase().includes(dep)) ||
                 (card.position && card.position.toLowerCase().includes(dep));
@@ -175,7 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return matchKeyword && matchDep && matchEmail && matchAddress;
         });
 
-        // 検索結果で画面をリセット
         cardListContainer.innerHTML = '';
         displayedCount = 0;
         loadMoreCards();
@@ -183,7 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // CSVエクスポート実行
     function exportCsv() {
-        if (!currentFilteredCards || currentFilteredCards.length === 0) {
+        // 未ロード分も含め、現在のフィルタ条件に合致する「全件」を出力対象とする
+        const targetData = currentFilteredCards && currentFilteredCards.length > 0 ? currentFilteredCards : allCards;
+
+        if (!targetData || targetData.length === 0) {
             alert("エクスポートするデータがありません。");
             return;
         }
@@ -191,39 +183,48 @@ document.addEventListener('DOMContentLoaded', () => {
         // BOM付きUTF-8で文字化け防止
         const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
         
-        // ヘッダー行
-        const headers = ['会社名', '部署', '役職', '氏名', 'Email', '会社TEL', '携帯TEL', 'FAX', '住所', 'メモ'];
+        // ヘッダー行の固定化
+        const headers = ['氏名', '会社名', '部署名', '役職', '電話番号', '携帯電話', 'FAX', 'Email', '住所', '登録日時', 'メモ'];
         let csvContent = headers.join(',') + '\n';
 
-        // エスケープ処理（カンマや改行を含む場合）
-        const escapeCsv = (str) => {
-            if (!str) return '';
-            let s = String(str);
-            if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-                s = '"' + s.replace(/"/g, '""') + '"';
+        // サニタイズ関数（CSV Injection対策）
+        const sanitize = (str) => {
+            if (!str) return '""';
+            let cleanStr = String(str).replace(/"/g, '""'); // ダブルクォートのエスケープ
+            // 先頭が =, +, -, @ または制御文字の場合はシングルクォートを付与
+            if (/^[=+\-@\u202E]/.test(cleanStr)) {
+                cleanStr = "'" + cleanStr;
             }
-            return s;
+            return `"${cleanStr}"`;
         };
 
         // データ行
-        currentFilteredCards.forEach(card => {
+        targetData.forEach(card => {
+            let createdAtStr = "";
+            if (card.createdAt && card.createdAt.toMillis) {
+                createdAtStr = new Date(card.createdAt.toMillis()).toLocaleString();
+            } else if (card.createdAt) {
+                createdAtStr = new Date(card.createdAt).toLocaleString();
+            }
+
             const row = [
-                escapeCsv(card.companyName),
-                escapeCsv(card.department),
-                escapeCsv(card.position),
-                escapeCsv(card.name),
-                escapeCsv(card.email),
-                escapeCsv(card.companyPhone),
-                escapeCsv(card.mobilePhone),
-                escapeCsv(card.fax),
-                escapeCsv(card.address),
-                escapeCsv(card.memo)
+                sanitize(card.name),
+                sanitize(card.companyName),
+                sanitize(card.department),
+                sanitize(card.position),
+                sanitize(card.companyPhone),
+                sanitize(card.mobilePhone),
+                sanitize(card.fax),
+                sanitize(card.email),
+                sanitize(card.address),
+                sanitize(createdAtStr),
+                sanitize(card.memo)
             ];
             csvContent += row.join(',') + '\n';
         });
 
         // ダウンロード処理
-        const blob = new Blob([bom, csvContent], { type: 'text/csv' });
+        const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -236,10 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // イベントバインド
     if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportCsv);
 
-    // 検索イベントのバインド
     if (searchButton) searchButton.addEventListener('click', performSearch);
     
-    // Enterキーでも検索発火
     const inputs = [searchKeyword, searchDepartment, searchEmail, searchAddress];
     inputs.forEach(input => {
         if (input) {

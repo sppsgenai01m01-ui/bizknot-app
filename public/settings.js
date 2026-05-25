@@ -20,9 +20,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveFieldButton = document.getElementById('save-field-button');
     const cancelFieldButton = document.getElementById('cancel-field-button');
 
-    auth.onAuthStateChanged(user => {
+    auth.onAuthStateChanged(async (user) => {
         if (user) {
-            initializeSettingsPage();
+            try {
+                // 🛡️ 管理者権限チェック（DBからユーザー情報を取得）
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists && userDoc.data().permission === 'admin') {
+                    initializeSettingsPage(); // 管理者なら画面を表示
+                } else {
+                    // 管理者でない場合はダッシュボードに強制送還！
+                    alert("このページにアクセスする権限がありません。");
+                    window.location.href = '/dashboard.html';
+                }
+            } catch (e) {
+                window.location.href = '/dashboard.html';
+            }
         } else {
             window.location.href = '/';
         }

@@ -1,0 +1,23 @@
+[
+  {
+    "uid": "test_admin_001",
+    "email": "admin@spps.co.jp",
+    "displayName": "Test Admin",
+    "permission": "admin",
+    "status": "ACTIVE"
+  },
+  {
+    "uid": "test_user_001",
+    "email": "user@gmail.com",
+    "displayName": "Test User",
+    "permission": "user",
+    "status": "ACTIVE"
+  },
+  {
+    "uid": "test_suspended_001",
+    "email": "suspended@spps.co.jp",
+    "displayName": "Suspended User",
+    "permission": "user",
+    "status": "SUSPENDED"
+  }
+]

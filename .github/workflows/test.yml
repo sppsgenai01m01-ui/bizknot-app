@@ -16,6 +16,12 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Java 21のセットアップ (エミュレータ起動用)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
       - name: パッケージのインストール
         run: npm install
 

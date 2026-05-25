@@ -3,7 +3,7 @@ name: Automated Testing (CI)
 on:
   push:
     branches:
-      - '**' # 全てのブランチでテストを走らせる設定
+      - '**'
   pull_request:
     branches:
       - main
@@ -34,10 +34,13 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: 【テスト1】単体テスト (Unit) の実行
-        run: npx vitest run
+        # ここを修正: tests/unit/ フォルダだけを対象にする
+        run: npx vitest run tests/unit/
 
       - name: 【テスト2】セキュリティルール (Rules) のテスト実行
-        run: npx firebase emulators:exec --project demo-test "npx vitest run tests/rules/firestore.rules.test.js"
+        # ここも修正: tests/rules/ フォルダだけを対象にする
+        run: npx firebase emulators:exec --project demo-test "npx vitest run tests/rules/"
 
       - name: 【テスト3】E2E (UI) テストの実行
-        run: npx playwright test
+        # 念のためE2Eも対象フォルダを明示
+        run: npx playwright test tests/e2e/

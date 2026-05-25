@@ -1,0 +1,46 @@
+name: Automated Testing (CI)
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: コードの取得 (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Node.js のセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Java 21 のセットアップ (Firebase Emulator用)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: 依存関係のインストール
+        run: npm ci || npm install
+
+      - name: Playwrightブラウザのインストール (E2Eテスト用)
+        run: npx playwright install --with-deps chromium
+
+      - name: Firebase CLI のインストール
+        run: npm install -g firebase-tools
+
+      - name: 【テスト1】単体テスト (Unit) の実行
+        run: npx vitest run tests/unit/
+
+      - name: 【テスト2】セキュリティルール (Rules) のテスト実行
+        run: firebase emulators:exec --project demo-test "npx vitest run tests/rules/"
+
+      - name: 【テスト3】E2E (UI) テストの実行
+        run: npx playwright test tests/e2e/

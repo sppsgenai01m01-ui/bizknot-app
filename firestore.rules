@@ -1,31 +1,51 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    function isAuthenticated() { return request.auth != null; }
+    function isNotSuspended() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status != 'SUSPENDED'; }
+    function isAdmin() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permission == 'admin'; }
 
-    // `business_cards`コレクションへのアクセスルール
-    match /business_cards/{cardId} {
-
-      // READ（get, list）:
-      // 認証済みであり、かつドキュメントのuserIdが自分のUIDと一致する場合のみ許可
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
-
-      // CREATE (create):
-      // 認証済みであり、かつ作成しようとしているドキュメントのuserIdが自分のUIDと一致する場合のみ許可
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-
-      // UPDATE (update):
-      // 認証済みであり、かつ更新しようとしているドキュメントのuserIdが自分のUIDと一致する場合のみ許可
-      // 加えて、userIdとcreatedAtの変更は許可しない
-      allow update: if request.auth != null && request.auth.uid == resource.data.userId
-                    && request.resource.data.userId == resource.data.userId
-                    && request.resource.data.createdAt == resource.data.createdAt;
-
-      // DELETE (delete):
-      // 認証済みであり、かつドキュメントのuserIdが自分のUIDと一致する場合のみ許可
-      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    match /users/{userId} {
+      allow create: if isAuthenticated() && request.auth.uid == userId && !exists(/databases/$(database)/documents/users/$(userId));
+      allow read: if isAuthenticated() && isNotSuspended() && (request.auth.uid == userId || isAdmin());
+      allow update, delete: if isAuthenticated() && isNotSuspended() && isAdmin();
     }
 
-    // 他のコレクションへのルールはここに追加する
+    function isValidCard() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['ownerId', 'companyName'])
+          && data.ownerId == request.auth.uid
+          && data.companyName is string
+          && data.companyName.size() > 0;
+    }
 
+    match /businessCards/{cardId} {
+      function isOwner() {
+        return request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.userId;
+      }
+
+      allow create: if isAuthenticated() && isNotSuspended() && isValidCard();
+      
+      allow read: if isAuthenticated() && isNotSuspended() && (isOwner() || isAdmin()) && (!('deletedAt' in resource.data) || resource.data.deletedAt == null || isAdmin());
+      
+      allow update: if isAuthenticated() && isNotSuspended() 
+                    && (isOwner() || isAdmin())
+                    && isValidCard()
+                    // 管理者でない場合、更新前のドキュメントが論理削除されていないことを確認し、
+                    // かつ、ユーザー自身がdeletedAtフィールドを変更しようとしていないことを確認する
+                    && (isAdmin() || (
+                        resource.data.get('deletedAt', null) == null &&
+                        request.resource.data.get('deletedAt', null) == resource.data.get('deletedAt', null)
+                    ));
+                    
+      allow delete: if isAuthenticated() && isNotSuspended() && (isOwner() || isAdmin());
+    }
+
+    match /auditLogs/{logId} {
+      allow create: if isAuthenticated() && isNotSuspended();
+      allow read, list: if isAuthenticated() && isNotSuspended() && isAdmin();
+      allow update, delete: if false; 
+    }
   }
 }

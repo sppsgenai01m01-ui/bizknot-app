@@ -12,6 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
+    <script src="/app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
@@ -23,7 +24,7 @@
     </header>
 
     <!-- メインコンテンツ -->
-    <main id="settings-container" class="p-4 md:p-8" style="display: none;">
+    <main id="settings-container" class="p-4 md:p-8">
 
         <!-- (タブ部分は変更なし) -->
         <div class="mb-8">
@@ -37,7 +38,7 @@
             </div>
 
             <!-- ▼▼ カスタム項目設定タブの中身を実装 ▼▼ -->
-            <div id="content-custom-fields" style="display: none;">
+            <div id="content-custom-fields">
                 <div class="flex justify-between items-center mb-4">
                     <p class="text-gray-600">名刺に登録する独自の項目を定義します。ここで設定した項目は、登録・編集画面などに反映されます。</p>
                     <button id="add-field-button" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">+ 新規項目を追加</button>

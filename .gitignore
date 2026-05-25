@@ -1,6 +1,18 @@
-# Firebase Service Account Key
+# Firebase
+.firebase/hosting.*.cache
+firebase-debug.log
+
+# Backend
+backend/node_modules/
 backend/serviceAccountKey.json
 
+<<<<<<< HEAD
 # Node.js dependencies
 backend/node_modules
 node_modules
+=======
+# General
+.DS_Store
+.vscode/
+node_modules/
+>>>>>>> feature/ocr-implementation

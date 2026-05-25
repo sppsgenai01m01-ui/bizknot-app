@@ -72,3 +72,18 @@ window.addAuditLog = async function(action, details = {}) {
         console.error("監査ログの記録に失敗しました:", e);
     }
 };
+
+// --- Firestoreのグローバルエラー監視（アカウント停止・権限エラーの検知） ---
+// どの画面でも、権限がないデータへアクセスしようとした際に強制的に弾く
+window.addEventListener('unhandledrejection', function(event) {
+    if (event.reason && (event.reason.code === 'permission-denied' || String(event.reason.message).includes('Missing or insufficient permissions'))) {
+        // 二重アラートを防ぐ
+        if (!window.hasAlertedPermissionDenied) {
+            window.hasAlertedPermissionDenied = true;
+            alert("権限エラー：アカウントが停止されているか、アクセス権限がありません。\nログイン画面へ戻ります。");
+            firebase.auth().signOut().then(() => {
+                window.location.href = '/index.html';
+            });
+        }
+    }
+});

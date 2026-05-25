@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -14,30 +13,33 @@
 
     <div class="bg-white p-8 md:p-12 rounded-lg shadow-md max-w-md w-full">
         <!-- サクセスアイコン -->
-        <div class="mx-auto bg-green-100 rounded-full h-20 w-20 flex items-center justify-center">
-            <svg class="h-12 w-12 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="mx-auto bg-green-100 rounded-full h-24 w-24 flex items-center justify-center mb-6">
+            <svg class="h-14 w-14 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
         </div>
 
         <!-- メッセージ -->
-        <h1 class="text-2xl font-bold mt-6">名刺を登録しました</h1>
-        <div id="registered-card-info" class="mt-4 text-gray-600 bg-gray-50 p-4 rounded-md">
-            <p id="card-info-placeholder">読み込み中...</p>
+        <h1 class="text-2xl font-bold mt-2 text-gray-800">名刺の登録が完了しました</h1>
+        
+        <!-- 動的に登録した名刺の情報を表示（SCR-005準拠） -->
+        <div id="registered-card-info" class="mt-6 text-gray-700 bg-gray-50 border border-gray-200 p-6 rounded-lg shadow-inner">
+            <p id="card-info-placeholder" class="animate-pulse">情報を読み込み中...</p>
         </div>
 
         <!-- アクションボタン -->
-        <div class="mt-8 space-y-4 md:space-y-0 md:space-x-4 flex flex-col md:flex-row">
-            <a href="/business_card_creation.html" id="register-more-button" class="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg">
+        <div class="mt-8 space-y-4 flex flex-col">
+            <a href="/business_card_creation.html" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow">
                 続けて登録する
             </a>
-            <a href="/business_card_list.html" id="view-list-button" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded-lg">
-                名刺一覧を見る
+            <a href="/business_card_list.html" class="w-full bg-white hover:bg-gray-50 text-blue-600 font-bold py-3 px-6 rounded-lg border border-blue-600 transition duration-200">
+                名刺一覧を確認する
             </a>
         </div>
     </div>
 
     <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+<<<<<<< HEAD
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
     <!-- Add SDKs for Firebase products that you want to use -->
     <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
@@ -86,6 +88,51 @@
         });
 
     </script>
+=======
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <!-- アプリ共通初期化 -->
+    <script src="app.js"></script>
+>>>>>>> feature/ocr-implementation
 
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const db = firebase.firestore();
+            const cardInfoPlaceholder = document.getElementById('card-info-placeholder');
+            const urlParams = new URLSearchParams(window.location.search);
+            const cardId = urlParams.get('id');
+
+            if (cardId) {
+                db.collection('businessCards').doc(cardId).get()
+                    .then(doc => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            cardInfoPlaceholder.innerHTML = `
+                                <p class="font-bold text-xl text-gray-800 mb-2">${data.companyName || '会社名なし'}</p>
+                                <p class="text-lg font-medium text-gray-600">${data.name || '氏名なし'} 様</p>
+                            `;
+                            cardInfoPlaceholder.classList.remove('animate-pulse');
+                        } else {
+                             cardInfoPlaceholder.textContent = '登録情報の取得に失敗しました。';
+                        }
+                    })
+                    .catch(err => {
+                         console.error("Error fetching document:", err);
+                         cardInfoPlaceholder.textContent = 'エラーが発生しました。';
+                    });
+            } else {
+                cardInfoPlaceholder.textContent = '正常に登録されました。';
+                cardInfoPlaceholder.classList.remove('animate-pulse');
+            }
+
+            // 履歴の操作: ユーザーがブラウザバックでフォームに戻るのを防ぐ
+            history.pushState(null, '', location.href);
+            window.addEventListener('popstate', function(event) {
+                history.pushState(null, '', location.href);
+            });
+        });
+    </script>
 </body>
 </html>

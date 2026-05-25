@@ -1,0 +1,6 @@
+- [/] 実装AI向け「申し送り書（ハンドオフドキュメント）」の作成
+- [x] 実装AI向け「申し送り書（ハンドオフドキュメント）」の作成
+- [x] テスト用ダミーユーザー定義ファイル (`tests/fixtures/users.json`) の作成
+- [x] Playwright用グローバルセットアップスクリプト (`tests/global-setup.js`) の作成
+- [x] Playwright設定ファイル (`playwright.config.js`) の作成
+- [x] 作業完了と監視体制への移行をユーザーに報告

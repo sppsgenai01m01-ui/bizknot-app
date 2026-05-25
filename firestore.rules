@@ -1,31 +1,50 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // `business_cards`コレクションへのアクセスルール
-    match /business_cards/{cardId} {
-
-      // READ（get, list）:
-      // 認証済みであり、かつドキュメントのuserIdが自分のUIDと一致する場合のみ許可
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
-
-      // CREATE (create):
-      // 認証済みであり、かつ作成しようとしているドキュメントのuserIdが自分のUIDと一致する場合のみ許可
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-
-      // UPDATE (update):
-      // 認証済みであり、かつ更新しようとしているドキュメントのuserIdが自分のUIDと一致する場合のみ許可
-      // 加えて、userIdとcreatedAtの変更は許可しない
-      allow update: if request.auth != null && request.auth.uid == resource.data.userId
-                    && request.resource.data.userId == resource.data.userId
-                    && request.resource.data.createdAt == resource.data.createdAt;
-
-      // DELETE (delete):
-      // 認証済みであり、かつドキュメントのuserIdが自分のUIDと一致する場合のみ許可
-      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    
+    // 共通関数：ログイン済みか
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // 共通関数：ユーザーが停止(SUSPENDED)されていないか
+    function isNotSuspended() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status != 'SUSPENDED';
     }
 
-    // 他のコレクションへのルールはここに追加する
+    // 共通関数：管理者か (既存コードのフィールド名 `permission` を参照)
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permission == 'admin';
+    }
 
+    // users コレクション
+    match /users/{userId} {
+      // 初回登録時の自己書き込み（かつ重複作成防止）のみ許可
+      allow create: if isAuthenticated() && request.auth.uid == userId && !exists(/databases/$(database)/documents/users/$(userId));
+      // Readは自分自身、または管理者のみ
+      allow read: if isAuthenticated() && isNotSuspended() && (request.auth.uid == userId || isAdmin());
+      allow update, delete: if isAuthenticated() && isNotSuspended() && isAdmin();
+    }
+
+    // businessCards コレクション (既存コードのコレクション名に準拠)
+    match /businessCards/{cardId} {
+      // Create/Read: 停止されていなければ可能（論理削除済みは管理者のみRead可）
+      allow create: if isAuthenticated() && isNotSuspended();
+      allow read: if isAuthenticated() && isNotSuspended() && (resource.data.deletedAt == null || isAdmin());
+      
+      // Update/Delete: 作成者(userId)自身、または管理者のみ。論理削除の勝手な復活も禁止
+      allow update: if isAuthenticated() && isNotSuspended() 
+                    && (request.auth.uid == resource.data.userId || isAdmin())
+                    && (!('deletedAt' in request.resource.data) || request.resource.data.deletedAt == resource.data.deletedAt || isAdmin());
+      allow delete: if isAuthenticated() && isNotSuspended() && (request.auth.uid == resource.data.userId || isAdmin());
+    }
+
+    // auditLogs コレクション
+    match /auditLogs/{logId} {
+      // 書き込みは全ユーザー可能だが、Readは管理者のみ
+      allow create: if isAuthenticated() && isNotSuspended();
+      allow read, list: if isAuthenticated() && isNotSuspended() && isAdmin();
+      allow update, delete: if false; // 監査ログの改ざん・削除は完全禁止
+    }
   }
 }

@@ -1,41 +1,51 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Firebaseの初期化が完了しているかを確認
     if (typeof firebase === 'undefined') {
         console.error('Firebase script has not been loaded.');
         return;
     }
 
     const auth = firebase.auth();
-
-    // DOM要素の取得
     const loginButton = document.getElementById('login-button');
     const errorMessage = document.getElementById('error-message');
 
-    // ログインボタンが存在する場合のみ処理を実行
     if (loginButton) {
         loginButton.addEventListener('click', () => {
             loginButton.disabled = true;
-            // Font Awesomeなどのアイコンライブラリがないため、テキストで表示
             loginButton.textContent = '処理中...';
-
             const provider = new firebase.auth.GoogleAuthProvider();
 
             auth.signInWithPopup(provider)
                 .then(result => {
-                    // ログイン成功後、ダッシュボードへリダイレクト
+                    const user = result.user;
+                    if (!user || !user.email) {
+                        throw new Error("ユーザー情報が取得できませんでした。");
+                    }
+
+                    // 🛡️ ドメイン制限チェック
+                    const email = user.email.toLowerCase();
+                    if (!email.endsWith('@spps.co.jp') && !email.endsWith('@gmail.com')) {
+                        // 許可されていないドメインの場合は強制ログアウト
+                        return auth.signOut().then(() => {
+                            throw new Error("許可されていないメールドメインです。(@spps.co.jp または @gmail.com のみ可能)");
+                        });
+                    }
+
+                    // ドメインチェックを通過したらダッシュボードへ
                     window.location.href = 'dashboard.html';
                 })
                 .catch(error => {
                     console.error("ログインに失敗しました:", error);
                     if (errorMessage) {
-                        errorMessage.textContent = 'ログインに失敗しました。ポップアップがブロックされていないか確認し、もう一度お試しください。';
+                        // エラーメッセージを画面に表示
+                        errorMessage.textContent = error.message.includes("許可されていない") 
+                            ? error.message 
+                            : 'ログインに失敗しました。ポップアップがブロックされていないか確認し、もう一度お試しください。';
                     }
                     resetLoginButton();
                 });
         });
     }
 
-    // ログインボタンの状態をリセットする関数
     function resetLoginButton() {
         if (loginButton) {
             loginButton.disabled = false;

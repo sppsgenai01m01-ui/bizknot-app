@@ -27,13 +27,17 @@ service cloud.firestore {
 
       allow create: if isAuthenticated() && isNotSuspended() && isValidCard();
       
-      // 修正: deletedAtが存在しない場合の Nullエラー を防ぐための安全な書き方に変更
       allow read: if isAuthenticated() && isNotSuspended() && (isOwner() || isAdmin()) && (!('deletedAt' in resource.data) || resource.data.deletedAt == null || isAdmin());
       
       allow update: if isAuthenticated() && isNotSuspended() 
                     && (isOwner() || isAdmin())
                     && isValidCard()
-                    && (!('deletedAt' in request.resource.data) || request.resource.data.deletedAt == resource.data.deletedAt || isAdmin());
+                    // 管理者でない場合、更新前のドキュメントが論理削除されていないことを確認し、
+                    // かつ、ユーザー自身がdeletedAtフィールドを変更しようとしていないことを確認する
+                    && (isAdmin() || (
+                        resource.data.get('deletedAt', null) == null &&
+                        request.resource.data.get('deletedAt', null) == resource.data.get('deletedAt', null)
+                    ));
                     
       allow delete: if isAuthenticated() && isNotSuspended() && (isOwner() || isAdmin());
     }

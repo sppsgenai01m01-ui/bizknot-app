@@ -39,63 +39,12 @@
     </div>
 
     <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
-<<<<<<< HEAD
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-    <!-- Add SDKs for Firebase products that you want to use -->
-    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
-
-    <script>
-        // Firebaseの初期化とデータ表示
-        const firebaseConfig = {
-            apiKey: "AIzaSyDGYmSxCNuf5bpZfQe5e-T0bvUXkU6zXfg",
-            authDomain: "bizknot-asever.firebaseapp.com",
-            projectId: "bizknot-asever",
-            storageBucket: "bizknot-asever.firebasestorage.app",
-            messagingSenderId: "103308146429",
-            appId: "1:103308146429:web:474099dc997f0dc85b3094"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        const cardInfoPlaceholder = document.getElementById('card-info-placeholder');
-        const urlParams = new URLSearchParams(window.location.search);
-        const cardId = urlParams.get('id');
-
-        if (cardId) {
-            db.collection('businessCards').doc(cardId).get()
-                .then(doc => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        cardInfoPlaceholder.innerHTML = `
-                            <p class="font-semibold text-lg">${data.companyName || ''}</p>
-                            <p>${data.personName || ''}</p>
-                        `;
-                    } else {
-                         cardInfoPlaceholder.textContent = '登録情報の取得に失敗しました。';
-                    }
-                })
-                .catch(err => {
-                     console.error("Error fetching document:", err);
-                     cardInfoPlaceholder.textContent = 'エラーが発生しました。';
-                });
-        }
-
-        // 履歴の操作: ユーザーがブラウザバックでフォームに戻るのを防ぐ
-        history.pushState(null, '', location.href);
-        window.addEventListener('popstate', function(event) {
-            history.pushState(null, '', location.href);
-            // ここで「戻ることはできません」のようなメッセージを出すことも可能
-        });
-
-    </script>
-=======
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
     <!-- アプリ共通初期化 -->
     <script src="app.js"></script>
->>>>>>> feature/ocr-implementation
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {

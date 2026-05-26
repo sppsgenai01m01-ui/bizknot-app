@@ -54,12 +54,7 @@ function protectPage(callback) {
             // ログイン済み＆有効であればコールバックを実行
             callback(user);
         } else {
-<<<<<<< HEAD
-            // 未ログインであれば、ログインページへリダイレクト
-            // ルートパス以外のページで未ログイン状態ならリダイレクトする
-=======
             // 未ログインであればログインページへリダイレクト
->>>>>>> feature/ocr-implementation
             const currentPath = window.location.pathname;
             if (currentPath !== '/' && currentPath !== '/index.html') {
                 window.location.href = '/';

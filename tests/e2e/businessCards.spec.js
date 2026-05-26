@@ -2,6 +2,14 @@ import { test, expect } from '@playwright/test';
 
 test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
 
+  test.beforeEach(async ({ page }) => {
+    // テスト用の認証モックフラグをセットするために、一度ルートにアクセス
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.setItem('e2e_test_mode', 'true');
+    });
+  });
+
   // ==========================================
   // 1. 名刺の新規作成フローの検証
   // ==========================================

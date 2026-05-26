@@ -91,6 +91,21 @@ window.addEventListener('unhandledrejection', function(event) {
             firebase.auth().signOut().then(() => {
                 window.location.href = '/index.html';
             });
-        }
     }
 });
+
+// --- E2Eテスト用モック ---
+// テスト実行時にlocalStorageフラグがあれば、強制的にログイン状態を作る
+if (window.localStorage && window.localStorage.getItem('e2e_test_mode') === 'true') {
+    const originalAuth = firebase.auth;
+    firebase.auth = function() {
+        const authInstance = originalAuth.apply(this, arguments);
+        authInstance.onAuthStateChanged = function(callback) {
+            console.log('E2E Test Mode: Mocking Auth State');
+            // テスト用のダミーユーザー情報を返す
+            callback({ uid: 'test-uid', email: 'test@spps.co.jp', displayName: 'Test User' });
+            return () => {};
+        };
+        return authInstance;
+    };
+}

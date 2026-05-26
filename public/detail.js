@@ -23,6 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const editButton = document.getElementById('edit-button');
     const deleteButton = document.getElementById('delete-button');
     const historyButton = document.getElementById('history-button'); // 追加
+    
+    // MVP追加DOM要素
+    const aiContextPanel = document.getElementById('ai-context-panel');
+    const aiTagsContainer = document.getElementById('ai-tags-container');
+    const projectHistoryContainer = document.getElementById('project-history-container');
+    const aiDraftBtn = document.getElementById('ai-draft-btn');
 
     // 履歴ボタンの表示
     if (historyButton) {
@@ -144,17 +150,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (faxField) faxField.innerHTML = `<span class="font-bold text-gray-600 w-24 inline-block">FAX:</span> ${data.fax || "未登録"}`;
                 if (addressField) addressField.innerHTML = `<span class="font-bold text-gray-600 w-24 inline-block">Address:</span> ${data.address || "未登録"}`;
 
-                // メモ（OCR全文など）の表示
-                if (customFieldsDisplayContainer && customFieldsListDisplay) {
-                    if (data.memo) {
-                        customFieldsListDisplay.innerHTML = `<div class="text-sm"><dt class="font-semibold text-gray-600 border-b pb-2 mb-2">メモ・OCR読み取り結果</dt><dd class="text-gray-800 p-3 bg-gray-50 rounded border whitespace-pre-wrap leading-relaxed">${data.memo}</dd></div>`;
-                        customFieldsDisplayContainer.style.display = 'block';
-                    } else {
-                        customFieldsDisplayContainer.style.display = 'none';
+                // ▼▼ MVP追加機能: マッピング情報とタグの表示処理 ▼▼
+                if (aiContextPanel) {
+                    aiContextPanel.classList.remove('hidden');
+                    
+                    if (aiTagsContainer) {
+                        aiTagsContainer.innerHTML = '';
+                        if (data.tags && Array.isArray(data.tags) && data.tags.length > 0) {
+                            data.tags.forEach(tag => {
+                                const span = document.createElement('span');
+                                span.className = "px-2 py-1 bg-white text-blue-700 rounded text-xs border border-blue-200 font-medium";
+                                span.textContent = `#${tag}`;
+                                aiTagsContainer.appendChild(span);
+                            });
+                        } else {
+                            aiTagsContainer.innerHTML = '<span class="text-xs text-gray-400">タグ未設定</span>';
+                        }
+                    }
+
+                    if (projectHistoryContainer) {
+                        projectHistoryContainer.innerHTML = `
+                            <li class="flex items-start gap-2">
+                                <div class="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5"></div>
+                                <div>特筆すべき過去の取引履歴はまだありません。</div>
+                            </li>
+                        `;
+                    }
+
+                    if (aiDraftBtn) {
+                        aiDraftBtn.addEventListener('click', async () => {
+                            try {
+                                aiDraftBtn.innerHTML = '処理中...';
+                                aiDraftBtn.disabled = true;
+                                await db.collection('businessCards').doc(cardId).update({
+                                    lastContactDate: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                                alert('AIメールの下書き作成機能を呼び出しました（MVPデモ）。\\n裏側で「最終連絡日」が現在時刻に更新されました！');
+                            } catch (e) {
+                                console.error(e);
+                                alert('エラーが発生しました。');
+                            } finally {
+                                aiDraftBtn.innerHTML = 'AIにアプローチ文面を作成させる';
+                                aiDraftBtn.disabled = false;
+                            }
+                        });
                     }
                 }
+                // ▲▲ MVP追加機能 ここまで ▲▲
 
-                // ▼▼ お客様の新機能：カスタム項目の表示処理を呼び出し ▼▼
+                // カスタム項目の表示処理
                 if (data.customData) {
                     await renderCustomFields(data.customData);
                 }
@@ -183,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ★★★ お客様の新機能：カスタム項目を描画する新関数 ★★★
+    // ★★★ カスタム項目を描画する関数 ★★★
     async function renderCustomFields(customData) {
         if (!customFieldsDisplayContainer || !customFieldsListDisplay) return;
 

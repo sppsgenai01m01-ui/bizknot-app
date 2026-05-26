@@ -117,19 +117,28 @@ document.addEventListener('DOMContentLoaded', () => {
         nextBatch.forEach(card => {
             const el = document.createElement('a');
             el.href = `/business_card_detail.html?id=${card.id}`;
-            el.className = "block bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:-translate-y-1 transition transform duration-200 overflow-hidden";
+            el.className = "block bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:-translate-y-1 transition transform duration-200 overflow-hidden flex flex-col h-full";
             
             const imgSrc = card.imageUrl ? card.imageUrl : "https://placehold.jp/300x150.png?text=No+Image";
             
-            // 取得したデータを安全に表示（エスケープ処理）
+            // 取得したデータを安全に表示（エスケープ処理） ＋ MVP追加: 登録者表示
             el.innerHTML = `
-                <div class="h-40 bg-gray-100 overflow-hidden border-b border-gray-100 relative">
+                <div class="h-40 bg-gray-100 overflow-hidden border-b border-gray-100 relative shrink-0">
                     <img src="${escapeHTML(imgSrc)}" alt="名刺画像" class="w-full h-full object-cover">
                 </div>
-                <div class="p-5">
+                <div class="p-5 flex-grow">
                     <p class="text-xs text-blue-600 font-bold mb-1 truncate">${escapeHTML(card.companyName || '会社名未登録')}</p>
                     <h3 class="font-bold text-xl text-gray-800 truncate mb-1">${escapeHTML(card.name || '氏名未登録')}</h3>
                     <p class="text-xs text-gray-500 truncate">${escapeHTML([card.department, card.position].filter(Boolean).join(' ') || '部署・役職未登録')}</p>
+                </div>
+                <div class="px-5 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between mt-auto">
+                    <span class="text-xs text-gray-500 font-semibold">社内接点(登録者)</span>
+                    <div class="flex items-center">
+                        <div class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold mr-1">
+                            ${escapeHTML((card.registeredBy || '不明').charAt(0))}
+                        </div>
+                        <span class="text-xs font-bold text-gray-700">${escapeHTML(card.registeredBy || '社内共通')}</span>
+                    </div>
                 </div>
             `;
             cardListContainer.appendChild(el);
@@ -157,7 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentFilteredCards = allCards.filter(card => {
             const matchKeyword = !keyword || 
                 (card.name && card.name.toLowerCase().includes(keyword)) ||
-                (card.companyName && card.companyName.toLowerCase().includes(keyword));
+                (card.companyName && card.companyName.toLowerCase().includes(keyword)) ||
+                (card.registeredBy && card.registeredBy.toLowerCase().includes(keyword)); // 登録者名でも検索可能に
             
             const matchDep = !dep || 
                 (card.department && card.department.toLowerCase().includes(dep)) ||

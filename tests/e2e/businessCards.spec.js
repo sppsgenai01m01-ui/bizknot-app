@@ -43,7 +43,7 @@ test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
     await page.goto('/business_card_list.html');
 
     // 【修正済み】先ほどお客様が上書きした最新画面に合わせたテスト
-    await expect(page.locator('h2').first()).toContainText('全社ネットワーク検索');
+    await expect(page.locator('h2').first()).toContainText('名刺一覧');
     
     const exportBtn = page.locator('#export-csv-button');
     await expect(exportBtn).toBeVisible();

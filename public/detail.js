@@ -44,6 +44,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const aiPromptTextarea = document.getElementById('ai-prompt-textarea');
     const submitAiPromptBtn = document.getElementById('submit-ai-prompt-btn');
     const cancelAiPromptBtn = document.getElementById('cancel-ai-prompt-btn');
+    const aiPromptInputPanel = document.getElementById('ai-prompt-input-panel');
+    const aiPromptResultPanel = document.getElementById('ai-prompt-result-panel');
+    const aiPromptInputButtons = document.getElementById('ai-prompt-input-buttons');
+    const aiPromptResultButtons = document.getElementById('ai-prompt-result-buttons');
+    const aiGeneratedText = document.getElementById('ai-generated-text');
+    const copyGeneratedBtn = document.getElementById('copy-generated-btn');
+    const launchMailerBtn = document.getElementById('launch-mailer-btn');
+    const closeAiPromptResultBtn = document.getElementById('close-ai-prompt-result-btn');
+    const backToPromptBtn = document.getElementById('back-to-prompt-btn');
 
     // モーダル関連（タグ・履歴編集）
     const editContextModal = document.getElementById('edit-context-modal');
@@ -55,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 基本アクションボタン
     const editButton = document.getElementById('edit-button');
     const deleteButton = document.getElementById('delete-button');
+    const historyButton = document.getElementById('history-button');
 
     let currentUser = null;
     let userPermission = 'user';
@@ -229,8 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (notesText) {
-            if (data.notes && data.notes.trim()) {
-                notesText.textContent = data.notes;
+            const memoVal = data.notes || data.memo || '';
+            if (memoVal.trim()) {
+                notesText.textContent = memoVal;
                 hasCustomData = true;
             } else {
                 notesText.textContent = "メモはありません。";
@@ -239,6 +250,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (customFieldsDisplayContainer && hasCustomData) {
             customFieldsDisplayContainer.style.display = 'block';
+        }
+
+        // 更新履歴ボタンの表示制御
+        if (historyButton) {
+            historyButton.style.display = 'inline-block';
+            historyButton.onclick = showHistoryModal;
         }
 
         // AIマッピング情報の表示
@@ -358,6 +375,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 aiPromptSelect.appendChild(opt);
             });
             aiPromptTextarea.value = '';
+            
+            // パネル表示のリセット
+            if (aiPromptInputPanel) aiPromptInputPanel.classList.remove('hidden');
+            if (aiPromptInputButtons) aiPromptInputButtons.classList.remove('hidden');
+            if (aiPromptResultPanel) aiPromptResultPanel.classList.add('hidden');
+            if (aiPromptResultButtons) aiPromptResultButtons.classList.add('hidden');
+            
             aiPromptModal.classList.remove('hidden');
         });
     }
@@ -390,9 +414,46 @@ document.addEventListener('DOMContentLoaded', () => {
                     lastContactTrigger: 'AIアプローチ作成'
                 });
                 
-                alert('AIへ指示を送信し、アプローチ文面を作成しました！（MVPデモ）\\n最終連絡日時が更新されました。');
+                // アプローチ文面のデモ生成
+                const company = currentCardData.companyName || '';
+                const name = currentCardData.name || '';
+                const position = currentCardData.position || '';
+                const department = currentCardData.department || '';
+                const tags = Array.isArray(currentCardData.tags) ? currentCardData.tags.join(', ') : '';
+                const projectHistory = currentCardData.projectHistory || '';
+
+                let mockEmail = `${company}\n`;
+                if (department || position) {
+                    mockEmail += `${[department, position].filter(Boolean).join(' ')}\n`;
+                }
+                mockEmail += `${name} 様\n\n`;
+                mockEmail += `いつも大変お世話になっております。\n`;
+                mockEmail += `BizKnotの ${currentUser.displayName || currentUser.email.split('@')[0]} です。\n\n`;
                 
-                aiPromptModal.classList.add('hidden');
+                mockEmail += `先日はお時間をいただき、誠にありがとうございました。\n`;
+                if (projectHistory) {
+                    mockEmail += `以前ご一緒させていただきました「${projectHistory.split('\n')[0].replace(/^[・\-\*\s]+/, '')}」などの件も踏まえ、`;
+                }
+                mockEmail += `貴社のお役に立てるご提案をさせていただきたく存じます。\n\n`;
+                
+                mockEmail += `【アプローチの方向性：${promptText}】\n`;
+                mockEmail += `現在、弊社では名刺情報管理および営業プロセスの効率化（AIアプローチ機能）に関する新しい取り組みを行っており、そちらのご紹介も兼ねて、短い時間で構いませんので情報交換の機会をいただけますでしょうか。\n\n`;
+                
+                if (tags) {
+                    mockEmail += `（関連キーワード: ${tags}）\n\n`;
+                }
+                
+                mockEmail += `是非一度オンライン等でご挨拶・ご意見を伺えますと幸いです。\n`;
+                mockEmail += `ご多忙の折恐縮ですが、ご検討のほどよろしくお願い申し上げます。`;
+
+                if (aiGeneratedText) aiGeneratedText.value = mockEmail;
+                
+                // パネルの切り替え
+                if (aiPromptInputPanel) aiPromptInputPanel.classList.add('hidden');
+                if (aiPromptInputButtons) aiPromptInputButtons.classList.add('hidden');
+                if (aiPromptResultPanel) aiPromptResultPanel.classList.remove('hidden');
+                if (aiPromptResultButtons) aiPromptResultButtons.classList.remove('hidden');
+                
                 fetchCardDetails();
             } catch (e) {
                 console.error(e);
@@ -401,6 +462,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitAiPromptBtn.innerHTML = '作成開始';
                 submitAiPromptBtn.disabled = false;
             }
+        });
+    }
+
+    // 生成結果画面のボタン制御
+    if (copyGeneratedBtn) {
+        copyGeneratedBtn.addEventListener('click', async () => {
+            const text = aiGeneratedText.value;
+            try {
+                await navigator.clipboard.writeText(text);
+                alert('アプローチ文面をクリップボードにコピーしました！');
+            } catch (err) {
+                alert('コピーに失敗しました。手動でコピーしてください。');
+            }
+        });
+    }
+    if (launchMailerBtn) {
+        launchMailerBtn.addEventListener('click', () => {
+            const text = aiGeneratedText.value;
+            const subject = encodeURIComponent('【BizKnot】情報交換・ご提案のご連絡');
+            const body = encodeURIComponent(text);
+            const email = currentCardData.email || '';
+            window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+        });
+    }
+    if (closeAiPromptResultBtn) {
+        closeAiPromptResultBtn.addEventListener('click', () => {
+            aiPromptModal.classList.add('hidden');
+        });
+    }
+    if (backToPromptBtn) {
+        backToPromptBtn.addEventListener('click', () => {
+            if (aiPromptInputPanel) aiPromptInputPanel.classList.remove('hidden');
+            if (aiPromptInputButtons) aiPromptInputButtons.classList.remove('hidden');
+            if (aiPromptResultPanel) aiPromptResultPanel.classList.add('hidden');
+            if (aiPromptResultButtons) aiPromptResultButtons.classList.add('hidden');
         });
     }
 
@@ -440,5 +536,74 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    }
+
+    // --- 履歴表示機能 ---
+    async function showHistoryModal() {
+        if (!cardId) return;
+
+        // モーダルの作成
+        let modal = document.getElementById('history-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'history-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col m-4">
+                    <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
+                        <h3 class="text-xl font-bold text-gray-800">更新履歴</h3>
+                        <button id="close-history-modal" class="text-gray-500 hover:text-red-500 bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div class="p-4 overflow-y-auto flex-1 bg-gray-100" id="history-content">
+                        <div class="flex justify-center my-8"><div class="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-blue-500"></div></div>
+                    </div>
+                    <div class="p-4 border-t bg-gray-50 rounded-b-lg flex justify-end">
+                        <button id="close-history-modal-btn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded shadow text-sm">閉じる</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            const closeModal = () => modal.classList.add('hidden');
+            document.getElementById('close-history-modal').addEventListener('click', closeModal);
+            document.getElementById('close-history-modal-btn').addEventListener('click', closeModal);
+        }
+        modal.classList.remove('hidden');
+
+        const historyContent = document.getElementById('history-content');
+        historyContent.innerHTML = '<div class="flex justify-center my-8"><div class="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-blue-500"></div></div>';
+
+        try {
+            const snapshot = await db.collection('businessCards').doc(cardId).collection('history').orderBy('archivedAt', 'desc').get();
+            if (snapshot.empty) {
+                historyContent.innerHTML = '<p class="text-center text-gray-500 py-8">更新履歴はありません。</p>';
+                return;
+            }
+
+            let html = '<div class="space-y-4">';
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const date = data.archivedAt ? data.archivedAt.toDate().toLocaleString('ja-JP') : '不明な日時';
+                html += `
+                    <div class="bg-white p-4 rounded shadow-sm border border-gray-200">
+                        <div class="text-sm text-gray-500 mb-2 border-b pb-1">変更前データ (保存日時: ${date})</div>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div><span class="text-gray-500">会社名:</span> <span class="font-medium">${data.companyName || '-'}</span></div>
+                            <div><span class="text-gray-500">氏名:</span> <span class="font-medium">${data.name || '-'}</span></div>
+                            <div><span class="text-gray-500">部署:</span> ${data.department || '-'}</div>
+                            <div><span class="text-gray-500">役職:</span> ${data.position || '-'}</div>
+                            <div class="col-span-2"><span class="text-gray-500">Email:</span> ${data.email || '-'}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            historyContent.innerHTML = html;
+
+        } catch (error) {
+            console.error("履歴の取得に失敗:", error);
+            historyContent.innerHTML = '<p class="text-center text-red-500 py-8">履歴の取得に失敗しました。</p>';
+        }
     }
 });

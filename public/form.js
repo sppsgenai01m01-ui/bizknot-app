@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // カスタム項目定義の読み込み
     async function loadCustomFields() {
         try {
-            const snapshot = await db.collection('customFields').orderBy('label').get();
+            const snapshot = await db.collection('fieldDefinitions').orderBy('label').get();
             if (!snapshot.empty) {
                 const container = document.getElementById('custom-fields-container');
                 const wrapper = document.getElementById('custom-fields-wrapper');

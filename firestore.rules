@@ -47,5 +47,21 @@ service cloud.firestore {
       allow read, list: if isAuthenticated() && isNotSuspended() && isAdmin();
       allow update, delete: if false; 
     }
+
+    match /fieldDefinitions/{fieldId} {
+      allow read: if isAuthenticated() && isNotSuspended();
+      allow write: if isAuthenticated() && isNotSuspended() && isAdmin();
+    }
+
+    match /aiprompts/{promptId} {
+      allow read: if isAuthenticated() && isNotSuspended();
+      allow write: if isAuthenticated() && isNotSuspended() && isAdmin();
+    }
+
+    match /appSettings/{settingId} {
+      allow read: if isAuthenticated() && isNotSuspended();
+      allow write: if isAuthenticated() && isNotSuspended() && isAdmin();
+    }
   }
 }
+

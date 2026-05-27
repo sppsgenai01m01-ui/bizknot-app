@@ -6,7 +6,7 @@
     <meta http-equiv="Expires" content="0">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BizKnot - 人脈ネットワーク</title>
+    <title>BizKnot - 名刺一覧</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="style.css">
@@ -22,7 +22,7 @@
                 </div>
                 <nav class="hidden md:flex space-x-8">
                     <a href="/dashboard.html" class="text-slate-500 hover:text-slate-700 px-3 py-2 rounded-md text-sm font-medium">ダッシュボード</a>
-                    <a href="/business_card_list.html" class="text-blue-600 px-3 py-2 rounded-md text-sm font-bold">人脈ネットワーク</a>
+                    <a href="/business_card_list.html" class="text-blue-600 px-3 py-2 rounded-md text-sm font-bold">名刺一覧</a>
                     <a href="/settings.html" class="text-slate-500 hover:text-slate-700 px-3 py-2 rounded-md text-sm font-medium">設定</a>
                     <button id="logout-button" class="text-slate-500 hover:text-slate-700 px-3 py-2 rounded-md text-sm font-medium">ログアウト</button>
                 </nav>
@@ -44,7 +44,7 @@
             <div class="max-w-7xl mx-auto w-full flex-1 flex flex-col">
                 <!-- ヘッダー（PC用） -->
                 <div class="hidden md:flex justify-between items-end mb-6">
-                    <h2 class="text-2xl font-bold text-slate-800">全社ネットワーク検索</h2>
+                    <h2 class="text-2xl font-bold text-slate-800">名刺一覧</h2>
                     <button id="export-csv-button" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold py-2 px-4 rounded-lg shadow-sm transition duration-200 text-sm flex items-center">
                         <i class="fas fa-download mr-2 text-green-600"></i>
                         CSVエクスポート
@@ -135,7 +135,7 @@
                 </a>
                 <a href="/business_card_list.html" class="flex flex-col items-center text-blue-600">
                     <i class="fas fa-address-book text-xl mb-1"></i>
-                    <span class="text-[10px] font-semibold">ネットワーク</span>
+                    <span class="text-[10px] font-semibold">名刺一覧</span>
                 </a>
             </div>
         </nav>

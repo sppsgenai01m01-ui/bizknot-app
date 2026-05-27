@@ -113,6 +113,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const escapeHTML = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
+    // 最終連絡日時を安全にフォーマットするフォールバック処理
+    function formatLastContactDate(dateVal) {
+        if (!dateVal) return '-';
+        if (typeof dateVal.toDate === 'function') {
+            const date = dateVal.toDate();
+            return `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+        }
+        if (dateVal && typeof dateVal === 'object' && dateVal.seconds) {
+            const date = new Date(dateVal.seconds * 1000);
+            return `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+        }
+        return String(dateVal);
+    }
+
+    // タグをバッジ形式でレンダリングするヘルパー
+    function renderTags(tags) {
+        if (!tags) return '';
+        let tagsArr = [];
+        if (Array.isArray(tags)) tagsArr = tags;
+        else if (typeof tags === 'string') tagsArr = tags.split(',').map(s => s.trim()).filter(Boolean);
+        
+        if (tagsArr.length === 0) return '';
+        
+        return `
+            <div class="flex flex-wrap gap-1 mt-1">
+                ${tagsArr.map(tag => `
+                    <span class="text-[9px] bg-blue-50 text-blue-600 border border-blue-100 px-1 rounded-sm">#${escapeHTML(tag)}</span>
+                `).join('')}
+            </div>
+        `;
+    }
+
     // 追加のカードを読み込んで描画する
     function loadMoreCards() {
         if (!pcTableBody && !mobileCardList) return;
@@ -142,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
         nextBatch.forEach(card => {
             const imgSrc = card.imageUrl ? card.imageUrl : "https://placehold.jp/100x100.png?text=No+Image";
             const detailUrl = `/business_card_detail.html?id=${card.id}`;
-            const lastContactDateStr = card.lastContactDate ? card.lastContactDate : '-';
+            const lastContactDateStr = formatLastContactDate(card.lastContactDate);
             const lastContactTriggerStr = card.lastContactTrigger ? card.lastContactTrigger : '-';
 
             // PC用行描画
@@ -158,6 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                     <td class="p-4">
                         <p class="font-bold text-slate-800">${escapeHTML(card.name || '氏名未設定')}</p>
+                        ${renderTags(card.tags)}
                     </td>
                     <td class="p-4">
                         <p class="text-sm font-bold text-blue-600">${escapeHTML(card.companyName || '会社名未設定')}</p>
@@ -190,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="text-xs text-blue-600 font-bold mb-1 truncate">${escapeHTML(card.companyName || '会社名未登録')}</p>
                         <h3 class="font-bold text-lg text-slate-800 truncate leading-tight">${escapeHTML(card.name || '氏名未登録')}</h3>
                         <p class="text-[10px] text-slate-500 truncate mt-1">${escapeHTML([card.department, card.position].filter(Boolean).join(' ') || '部署未登録')}</p>
+                        ${renderTags(card.tags)}
                     </div>
                     <div class="absolute bottom-0 left-0 w-full bg-slate-50 border-t border-slate-100 px-3 py-2 flex items-center justify-between">
                         <span class="text-[10px] text-slate-500 font-medium">最終連絡: ${escapeHTML(lastContactDateStr)}</span>

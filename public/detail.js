@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!email) return `<span class="font-bold text-gray-600 w-24 inline-block">Email:</span> 未登録`;
             return `<div class="flex flex-wrap items-center gap-2"><span class="font-bold text-gray-600 w-24 flex-shrink-0">Email:</span>
                     <span class="text-gray-800 break-all">${escapeHTML(email)}</span>
-                    <a href="mailto:${escapeHTML(email)}" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-full text-sm inline-flex items-center shadow-sm transition-colors md:ml-auto">
+                    <a href="mailto:${escapeHTML(email)}" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-full text-sm inline-flex items-center shadow-sm transition-colors ml-auto">
                         メール送信
                     </a></div>`;
         };

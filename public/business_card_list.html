@@ -11,14 +11,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen overflow-hidden">
+<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen overflow-x-hidden">
 
     <!-- 共通トップヘッダー (PC/スマホ共通) -->
     <header class="bg-white shadow-sm sticky top-0 z-40 border-b border-slate-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center">
-                    <h1 class="text-xl font-bold text-blue-600">BizKnot</h1>
+                    <a href="/dashboard.html" class="flex items-center"><h1 class="text-xl font-bold text-blue-600">BizKnot</h1></a>
                 </div>
                 <nav class="hidden md:flex space-x-8">
                     <a href="/dashboard.html" class="text-slate-500 hover:text-slate-700 px-3 py-2 rounded-md text-sm font-medium">ダッシュボード</a>
@@ -27,16 +27,13 @@
                     <button id="logout-button" class="text-slate-500 hover:text-slate-700 px-3 py-2 rounded-md text-sm font-medium">ログアウト</button>
                 </nav>
                 <div class="md:hidden flex items-center">
-                     <button id="export-csv-button-mobile" class="text-slate-500 hover:text-green-600">
-                        <i class="fas fa-download"></i>
-                    </button>
                 </div>
             </div>
         </div>
     </header>
 
     <!-- メインコンテンツエリア -->
-    <div class="flex-1 flex flex-col overflow-hidden relative">
+    <div class="flex-1 flex flex-col relative">
 
         <!-- スクロール可能なメイン領域 -->
         <main class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 lg:pb-8 flex flex-col">
@@ -123,22 +120,7 @@
             </div>
         </main>
 
-        <!-- スマホ用ボトムナビゲーション -->
-        <nav class="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-50 px-6 py-3 pb-safe">
-            <div class="flex justify-between items-center">
-                <a href="/dashboard.html" class="flex flex-col items-center text-slate-400 hover:text-slate-600">
-                    <i class="fas fa-home text-xl mb-1"></i>
-                    <span class="text-[10px] font-semibold">ホーム</span>
-                </a>
-                <a href="/business_card_creation.html" class="relative -top-6 w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-full shadow-lg shadow-blue-500/30 flex items-center justify-center text-white transform hover:scale-105 transition-transform">
-                    <i class="fas fa-camera text-2xl"></i>
-                </a>
-                <a href="/business_card_list.html" class="flex flex-col items-center text-blue-600">
-                    <i class="fas fa-address-book text-xl mb-1"></i>
-                    <span class="text-[10px] font-semibold">名刺一覧</span>
-                </a>
-            </div>
-        </nav>
+        <!-- スマホ用ボトムナビゲーション（非表示化） -->
     </div>
 
     <!-- Firebase SDK -->

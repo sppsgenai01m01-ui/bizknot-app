@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
             customFieldsListDisplay.innerHTML = '';
             if (customFieldDefs.length > 0) {
                 customFieldDefs.forEach(field => {
-                    const val = (data.customFields && data.customFields[field.key]) ? data.customFields[field.key] : '未設定';
+                    const val = (data.customData && data.customData[field.key]) ? data.customData[field.key] : '未設定';
                     customFieldsListDisplay.innerHTML += `
                         <div class="flex border-b border-gray-100 pb-2">
                             <span class="font-semibold text-gray-600 w-32 flex-shrink-0">${escapeHTML(field.label)}:</span>

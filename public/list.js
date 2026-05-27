@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let matchCustom = true;
             for (const key in customFilters) {
                 const searchVal = customFilters[key];
-                const cardVal = (card.customFields && card.customFields[key]) ? String(card.customFields[key]).toLowerCase() : '';
+                const cardVal = (card.customData && card.customData[key]) ? String(card.customData[key]).toLowerCase() : '';
                 if (!cardVal.includes(searchVal)) {
                     matchCustom = false;
                     break;
@@ -294,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ].map(val => `"${String(val).replace(/"/g, '""')}"`);
 
             customFieldDefinitions.forEach(f => {
-                const val = (card.customFields && card.customFields[f.key]) ? card.customFields[f.key] : '';
+                const val = (card.customData && card.customData[f.key]) ? card.customData[f.key] : '';
                 row.push(`"${String(val).replace(/"/g, '""')}"`);
             });
 

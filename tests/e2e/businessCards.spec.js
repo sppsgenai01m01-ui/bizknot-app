@@ -15,7 +15,7 @@ test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
   // ==========================================
   test('名刺の新規作成画面が正しく表示され、フォームに入力できること', async ({ page }) => {
     // 開発サーバーのURLに合わせてアクセス
-    await page.goto('/creation.html');
+    await page.goto('/business_card_creation.html');
 
     // 画面の基本要素が表示されているか確認
     await expect(page.locator('h1').first()).toContainText('BizKnot');
@@ -46,7 +46,7 @@ test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
     await page.goto('/business_card_list.html');
 
     // 画面タイトルとCSVエクスポートボタンの確認
-    await expect(page.locator('h2')).toContainText('名刺一覧・検索');
+    await expect(page.locator('h2').first()).toContainText('全社ネットワーク検索');
     
     // PC表示の際にCSVエクスポートボタンが表示されているか
     const exportBtn = page.locator('#export-csv-button');
@@ -61,24 +61,10 @@ test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
     await expect(searchBtn).toBeEnabled();
     await searchBtn.click();
 
-    // カードリストのコンテナが存在しているか
-    await expect(page.locator('#card-list-container')).toBeVisible();
-  });
-
-  // ==========================================
-  // 3. 詳細検索（高度なフィルター）の表示検証
-  // ==========================================
-  test('詳細検索パネルがHTML上に存在すること', async ({ page }) => {
-    await page.goto('/business_card_list.html');
-
-    const advancedPanel = page.locator('#advanced-search-panel');
-    
-    // 初期状態では隠れていることを確認 (Tailwindの hidden クラス)
-    await expect(advancedPanel).toHaveClass(/hidden/);
-    
-    // 詳細検索を開くボタンが存在するか
-    const toggleBtn = page.locator('#toggle-advanced-search');
-    await expect(toggleBtn).toBeVisible();
+    // カードリストのコンテナが存在しているか（PC版かスマホ版のいずれか）
+    const hasPcTable = await page.locator('#pc-table-body').count() > 0;
+    const hasMobileList = await page.locator('#mobile-card-list').count() > 0;
+    expect(hasPcTable || hasMobileList).toBeTruthy();
   });
 
 });

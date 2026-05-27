@@ -41,7 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
         userRef.get().then(doc => {
             if (doc.exists) {
                 const userData = doc.data();
-                userDisplayName.innerHTML = `ようこそ、<span class="font-semibold">${userData.displayName || 'ユーザー'}</span>さん`;
+                const formattedName = window.formatUserName ? window.formatUserName(userData.displayName) : userData.displayName;
+                userDisplayName.innerHTML = `ようこそ、<span class="font-semibold">${formattedName || 'ユーザー'}</span>さん`;
                 if (userData.permission === 'admin') {
                     console.log("管理者権限を検出しました。管理者メニューを表示します。");
                     adminMenu.classList.remove('hidden');

@@ -1,14 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     const db = firebase.firestore();
-    const cardListContainer = document.getElementById('card-list-container');
+    const pcTableBody = document.getElementById('pc-table-body');
+    const mobileCardList = document.getElementById('mobile-card-list');
     const searchButton = document.getElementById('search-button');
     const searchKeyword = document.getElementById('search-keyword');
-    const toggleAdvancedBtn = document.getElementById('toggle-advanced-search');
-    const advancedPanel = document.getElementById('advanced-search-panel');
-    const searchDepartment = document.getElementById('search-department');
-    const searchEmail = document.getElementById('search-email');
-    const searchAddress = document.getElementById('search-address');
     const exportCsvBtn = document.getElementById('export-csv-button');
+    const exportCsvBtnMobile = document.getElementById('export-csv-button-mobile');
     const scrollSentinel = document.getElementById('scroll-sentinel');
     const loadingMoreSpinner = document.getElementById('loading-more-spinner');
 
@@ -18,23 +15,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const CARDS_PER_PAGE = 20; // 1回のスクロールで読み込む件数
     let observer; // IntersectionObserver
 
-    // 詳細検索の開閉トグル
-    if (toggleAdvancedBtn) {
-        toggleAdvancedBtn.addEventListener('click', () => {
-            advancedPanel.classList.toggle('hidden');
-            if (advancedPanel.classList.contains('hidden')) {
-                toggleAdvancedBtn.innerHTML = '<svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>詳細検索（フィルター）を開く';
-            } else {
-                toggleAdvancedBtn.innerHTML = '<svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>詳細検索を閉じる';
-            }
-        });
-    }
+
 
     // 認証監視
     firebase.auth().onAuthStateChanged(user => {
         if (user) {
             const userNameDisplay = document.getElementById('user-name-display');
-            if (userNameDisplay) userNameDisplay.textContent = user.displayName || user.email;
+            const formattedName = window.formatUserName ? window.formatUserName(user.displayName) : user.displayName;
+            if (userNameDisplay) userNameDisplay.textContent = formattedName || user.email;
             fetchAllCards();
         } else {
             window.location.href = 'index.html';
@@ -43,14 +31,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Firestoreから全データを取得
     async function fetchAllCards() {
-        if (!cardListContainer) return;
+        if (!pcTableBody && !mobileCardList) return;
         
-        cardListContainer.innerHTML = `
+        const loadingHtml = `
             <div class="col-span-full text-center py-12">
                 <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
                 <p class="text-gray-500 mt-4 font-semibold">名刺データを読み込み中...</p>
             </div>
         `;
+        if (pcTableBody) pcTableBody.innerHTML = `<tr><td colspan="6">${loadingHtml}</td></tr>`;
+        if (mobileCardList) mobileCardList.innerHTML = loadingHtml;
 
         try {
             const snapshot = await db.collection('businessCards').orderBy('createdAt', 'desc').get();
@@ -64,14 +54,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             currentFilteredCards = [...allCards];
             displayedCount = 0;
-            cardListContainer.innerHTML = '';
+            if (pcTableBody) pcTableBody.innerHTML = '';
+            if (mobileCardList) mobileCardList.innerHTML = '';
             
             loadMoreCards();
             setupIntersectionObserver();
             
         } catch (error) {
             console.error("Error fetching cards:", error);
-            cardListContainer.innerHTML = '<p class="col-span-full text-center text-red-500 font-bold py-8">データの読み込みに失敗しました。</p>';
+            const errHtml = '<p class="col-span-full text-center text-red-500 font-bold py-8">データの読み込みに失敗しました。</p>';
+            if (pcTableBody) pcTableBody.innerHTML = `<tr><td colspan="6">${errHtml}</td></tr>`;
+            if (mobileCardList) mobileCardList.innerHTML = errHtml;
         }
     }
 
@@ -87,9 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (scrollSentinel) observer.observe(scrollSentinel);
     }
 
-    // 追加のカードを読み込んで描画する（ページネーション）
+    // 追加のカードを読み込んで描画する
     function loadMoreCards() {
-        if (!cardListContainer) return;
+        if (!pcTableBody && !mobileCardList) return;
         
         if (displayedCount >= currentFilteredCards.length) {
             if (loadingMoreSpinner) loadingMoreSpinner.classList.add('hidden');
@@ -101,47 +94,87 @@ document.addEventListener('DOMContentLoaded', () => {
         const nextBatch = currentFilteredCards.slice(displayedCount, displayedCount + CARDS_PER_PAGE);
         
         if (displayedCount === 0 && nextBatch.length === 0) {
-            cardListContainer.innerHTML = `
+            const emptyHtml = `
                 <div class="col-span-full text-center bg-white rounded-xl shadow-sm border border-gray-200 py-12">
-                    <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <p class="text-gray-500 text-lg font-semibold">条件に一致する名刺が見つかりません</p>
+                    <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 font-semibold">条件に一致する名刺が見つかりません</p>
                 </div>
             `;
+            if (pcTableBody) pcTableBody.innerHTML = `<tr><td colspan="6">${emptyHtml}</td></tr>`;
+            if (mobileCardList) mobileCardList.innerHTML = emptyHtml;
             if (loadingMoreSpinner) loadingMoreSpinner.classList.add('hidden');
             return;
         }
 
-        // XSS対策：悪意のあるスクリプトタグなどを無害化する（サニタイズ）
         const escapeHTML = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
         nextBatch.forEach(card => {
-            const el = document.createElement('a');
-            el.href = `/business_card_detail.html?id=${card.id}`;
-            el.className = "block bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:-translate-y-1 transition transform duration-200 overflow-hidden flex flex-col h-full";
-            
-            const imgSrc = card.imageUrl ? card.imageUrl : "https://placehold.jp/300x150.png?text=No+Image";
-            
-            // 取得したデータを安全に表示（エスケープ処理） ＋ MVP追加: 登録者表示
-            el.innerHTML = `
-                <div class="h-40 bg-gray-100 overflow-hidden border-b border-gray-100 relative shrink-0">
-                    <img src="${escapeHTML(imgSrc)}" alt="名刺画像" class="w-full h-full object-cover">
-                </div>
-                <div class="p-5 flex-grow">
-                    <p class="text-xs text-blue-600 font-bold mb-1 truncate">${escapeHTML(card.companyName || '会社名未登録')}</p>
-                    <h3 class="font-bold text-xl text-gray-800 truncate mb-1">${escapeHTML(card.name || '氏名未登録')}</h3>
-                    <p class="text-xs text-gray-500 truncate">${escapeHTML([card.department, card.position].filter(Boolean).join(' ') || '部署・役職未登録')}</p>
-                </div>
-                <div class="px-5 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between mt-auto">
-                    <span class="text-xs text-gray-500 font-semibold">社内接点(登録者)</span>
-                    <div class="flex items-center">
-                        <div class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold mr-1">
-                            ${escapeHTML((card.registeredBy || '不明').charAt(0))}
+            const imgSrc = card.imageUrl ? card.imageUrl : "https://placehold.jp/100x100.png?text=No+Image";
+            const detailUrl = `/business_card_detail.html?id=${card.id}`;
+            const registrantName = card.registeredByName || card.registeredBy || '不明';
+            const registrantAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(registrantName)}&background=random`;
+
+            // PC用行描画
+            if (pcTableBody) {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition cursor-pointer border-b border-slate-100 group";
+                tr.onclick = () => window.location.href = detailUrl;
+                tr.innerHTML = `
+                    <td class="p-4">
+                        <div class="w-12 h-12 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shadow-sm">
+                            <img src="${escapeHTML(imgSrc)}" alt="名刺" class="w-full h-full object-cover">
                         </div>
-                        <span class="text-xs font-bold text-gray-700">${escapeHTML(card.registeredBy || '社内共通')}</span>
+                    </td>
+                    <td class="p-4">
+                        <p class="font-bold text-slate-800">${escapeHTML(card.name || '氏名未設定')}</p>
+                    </td>
+                    <td class="p-4">
+                        <p class="text-sm font-bold text-blue-600">${escapeHTML(card.companyName || '会社名未設定')}</p>
+                        <p class="text-xs text-slate-500">${escapeHTML([card.department, card.position].filter(Boolean).join(' ') || '部署未設定')}</p>
+                    </td>
+                    <td class="p-4">
+                        <p class="text-xs text-slate-600 mb-1"><i class="fas fa-envelope mr-1 text-slate-400"></i>${escapeHTML(card.email || '-')}</p>
+                        <p class="text-xs text-slate-600"><i class="fas fa-phone mr-1 text-slate-400"></i>${escapeHTML(card.companyPhone || card.mobilePhone || '-')}</p>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2" title="${escapeHTML(registrantName)}が登録しました">
+                            <img src="${registrantAvatar}" class="w-6 h-6 rounded-full shadow-sm">
+                            <span class="text-xs font-semibold text-slate-700 truncate w-16">${escapeHTML(registrantName)}</span>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <a href="${detailUrl}" class="inline-flex items-center text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition">
+                            詳細を見る<i class="fas fa-chevron-right ml-1"></i>
+                        </a>
+                    </td>
+                `;
+                pcTableBody.appendChild(tr);
+            }
+
+            // スマホ用カード描画
+            if (mobileCardList) {
+                const el = document.createElement('a');
+                el.href = detailUrl;
+                el.className = "block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative pb-10";
+                el.innerHTML = `
+                    <div class="h-24 bg-slate-100 overflow-hidden border-b border-slate-100">
+                        <img src="${escapeHTML(imgSrc)}" alt="名刺画像" class="w-full h-full object-cover opacity-80">
                     </div>
-                </div>
-            `;
-            cardListContainer.appendChild(el);
+                    <div class="p-4">
+                        <p class="text-xs text-blue-600 font-bold mb-1 truncate">${escapeHTML(card.companyName || '会社名未登録')}</p>
+                        <h3 class="font-bold text-lg text-slate-800 truncate leading-tight">${escapeHTML(card.name || '氏名未登録')}</h3>
+                        <p class="text-[10px] text-slate-500 truncate mt-1">${escapeHTML([card.department, card.position].filter(Boolean).join(' ') || '部署未登録')}</p>
+                    </div>
+                    <div class="absolute bottom-0 left-0 w-full bg-slate-50 border-t border-slate-100 px-3 py-2 flex items-center justify-between">
+                        <span class="text-[10px] text-slate-500 font-medium">登録者:</span>
+                        <div class="flex items-center gap-1.5">
+                            <img src="${registrantAvatar}" class="w-4 h-4 rounded-full">
+                            <span class="text-[10px] font-bold text-slate-700">${escapeHTML(registrantName)}</span>
+                        </div>
+                    </div>
+                `;
+                mobileCardList.appendChild(el);
+            }
         });
 
         displayedCount += nextBatch.length;
@@ -158,28 +191,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function performSearch() {
         if (!allCards.length) return;
 
-        const keyword = searchKeyword.value.toLowerCase();
-        const dep = searchDepartment.value.toLowerCase();
-        const email = searchEmail.value.toLowerCase();
-        const address = searchAddress.value.toLowerCase();
+        const keyword = searchKeyword ? searchKeyword.value.toLowerCase() : '';
 
         currentFilteredCards = allCards.filter(card => {
             const matchKeyword = !keyword || 
                 (card.name && card.name.toLowerCase().includes(keyword)) ||
                 (card.companyName && card.companyName.toLowerCase().includes(keyword)) ||
-                (card.registeredBy && card.registeredBy.toLowerCase().includes(keyword)); // 登録者名でも検索可能に
+                (card.department && card.department.toLowerCase().includes(keyword));
             
-            const matchDep = !dep || 
-                (card.department && card.department.toLowerCase().includes(dep)) ||
-                (card.position && card.position.toLowerCase().includes(dep));
-                
-            const matchEmail = !email || (card.email && card.email.toLowerCase().includes(email));
-            const matchAddress = !address || (card.address && card.address.toLowerCase().includes(address));
-
-            return matchKeyword && matchDep && matchEmail && matchAddress;
+            return matchKeyword;
         });
 
-        cardListContainer.innerHTML = '';
+        if (pcTableBody) pcTableBody.innerHTML = '';
+        if (mobileCardList) mobileCardList.innerHTML = '';
         displayedCount = 0;
         loadMoreCards();
     }
@@ -238,15 +262,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // イベントバインド
     if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportCsv);
+    if (exportCsvBtnMobile) exportCsvBtnMobile.addEventListener('click', exportCsv);
 
     if (searchButton) searchButton.addEventListener('click', performSearch);
     
-    const inputs = [searchKeyword, searchDepartment, searchEmail, searchAddress];
-    inputs.forEach(input => {
-        if (input) {
-            input.addEventListener('keydown', (e) => { 
-                if(e.key === 'Enter') performSearch(); 
-            });
-        }
-    });
+    if (searchKeyword) {
+        searchKeyword.addEventListener('keydown', (e) => { 
+            if(e.key === 'Enter') performSearch(); 
+        });
+    }
 });

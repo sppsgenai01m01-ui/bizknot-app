@@ -239,6 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     await cardRef.update(cardData);
                 } else {
                     cardData.ownerId = currentUser.uid;
+                    cardData.registeredByName = window.formatUserName ? window.formatUserName(currentUser.displayName) : currentUser.displayName || currentUser.email.split('@')[0];
                     cardData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
                     if (draftData && draftData.imageUrl) {
                         cardData.imageUrl = draftData.imageUrl;

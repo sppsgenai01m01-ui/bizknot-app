@@ -23,6 +23,15 @@ if (!firebase.apps.length) {
 
 
 // --- 共通ユーティリティ ---
+window.formatUserName = function(name) {
+    if (!name) return '';
+    const parts = name.trim().split(/[\s　]+/);
+    if (parts.length === 2) {
+        return `${parts[1]} ${parts[0]}`;
+    }
+    return name;
+};
+
 // ログインが必要なページのための認証チェック
 function protectPage(callback) {
     firebase.auth().onAuthStateChanged(async user => {
@@ -33,7 +42,7 @@ function protectPage(callback) {
                 if (!userDoc.exists) {
                     // 初回ログイン時にFirestoreへユーザー情報を登録
                     await userRef.set({
-                        displayName: user.displayName || user.email.split('@')[0],
+                        displayName: window.formatUserName(user.displayName) || user.email.split('@')[0],
                         email: user.email,
                         permission: 'user', // デフォルトは一般ユーザー
                         status: 'ACTIVE', // ACTIVE または SUSPENDED

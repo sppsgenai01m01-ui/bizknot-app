@@ -8,26 +8,63 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportCsvBtnMobile = document.getElementById('export-csv-button-mobile');
     const scrollSentinel = document.getElementById('scroll-sentinel');
     const loadingMoreSpinner = document.getElementById('loading-more-spinner');
+    const toggleAdvancedSearchBtn = document.getElementById('toggle-advanced-search');
+    const advancedSearchPanel = document.getElementById('advanced-search-panel');
+    const advancedSearchIcon = document.getElementById('advanced-search-icon');
+    const customFieldsSearchContainer = document.getElementById('custom-fields-search-container');
 
-    let allCards = []; // インメモリフィルタリング用の全データ保持
-    let currentFilteredCards = []; // 現在の検索条件に合致するデータ
-    let displayedCount = 0; // 現在画面に表示されている件数
-    const CARDS_PER_PAGE = 20; // 1回のスクロールで読み込む件数
-    let observer; // IntersectionObserver
-
-
+    let allCards = []; 
+    let currentFilteredCards = [];
+    let displayedCount = 0;
+    const CARDS_PER_PAGE = 20;
+    let observer;
+    let customFieldDefinitions = [];
 
     // 認証監視
-    firebase.auth().onAuthStateChanged(user => {
+    firebase.auth().onAuthStateChanged(async user => {
         if (user) {
-            const userNameDisplay = document.getElementById('user-name-display');
-            const formattedName = window.formatUserName ? window.formatUserName(user.displayName) : user.displayName;
-            if (userNameDisplay) userNameDisplay.textContent = formattedName || user.email;
+            await fetchCustomFieldDefinitions();
             fetchAllCards();
         } else {
             window.location.href = 'index.html';
         }
     });
+
+    // 詳細検索パネルのトグル
+    if (toggleAdvancedSearchBtn) {
+        toggleAdvancedSearchBtn.addEventListener('click', () => {
+            advancedSearchPanel.classList.toggle('hidden');
+            advancedSearchIcon.classList.toggle('rotate-180');
+        });
+    }
+
+    // カスタム項目定義の取得と検索UIの生成
+    async function fetchCustomFieldDefinitions() {
+        try {
+            const snapshot = await db.collection('fieldDefinitions').get();
+            customFieldDefinitions = [];
+            snapshot.forEach(doc => {
+                customFieldDefinitions.push({ id: doc.id, ...doc.data() });
+            });
+            renderAdvancedSearchUI();
+        } catch (error) {
+            console.error("Error fetching custom fields:", error);
+        }
+    }
+
+    function renderAdvancedSearchUI() {
+        if (!customFieldsSearchContainer) return;
+        customFieldsSearchContainer.innerHTML = '';
+        
+        customFieldDefinitions.forEach(field => {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <label class="block text-xs font-semibold text-slate-500 mb-1">${escapeHTML(field.label)}</label>
+                <input type="text" id="search-custom-${field.key}" data-key="${field.key}" class="custom-search-input w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            `;
+            customFieldsSearchContainer.appendChild(div);
+        });
+    }
 
     // Firestoreから全データを取得
     async function fetchAllCards() {
@@ -52,13 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            currentFilteredCards = [...allCards];
-            displayedCount = 0;
-            if (pcTableBody) pcTableBody.innerHTML = '';
-            if (mobileCardList) mobileCardList.innerHTML = '';
-            
-            loadMoreCards();
-            setupIntersectionObserver();
+            performSearch();
             
         } catch (error) {
             console.error("Error fetching cards:", error);
@@ -79,6 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (scrollSentinel) observer.observe(scrollSentinel);
     }
+
+    const escapeHTML = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
     // 追加のカードを読み込んで描画する
     function loadMoreCards() {
@@ -106,18 +139,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const escapeHTML = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
         nextBatch.forEach(card => {
             const imgSrc = card.imageUrl ? card.imageUrl : "https://placehold.jp/100x100.png?text=No+Image";
             const detailUrl = `/business_card_detail.html?id=${card.id}`;
-            const registrantName = card.registeredByName || card.registeredBy || '不明';
-            const registrantAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(registrantName)}&background=random`;
+            const lastContactDateStr = card.lastContactDate ? card.lastContactDate : '-';
+            const lastContactTriggerStr = card.lastContactTrigger ? card.lastContactTrigger : '-';
 
             // PC用行描画
             if (pcTableBody) {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition cursor-pointer border-b border-slate-100 group";
+                tr.className = "hover:bg-blue-50 transition cursor-pointer border-b border-slate-100 group";
                 tr.onclick = () => window.location.href = detailUrl;
                 tr.innerHTML = `
                     <td class="p-4">
@@ -137,15 +168,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="text-xs text-slate-600"><i class="fas fa-phone mr-1 text-slate-400"></i>${escapeHTML(card.companyPhone || card.mobilePhone || '-')}</p>
                     </td>
                     <td class="p-4">
-                        <div class="flex items-center gap-2" title="${escapeHTML(registrantName)}が登録しました">
-                            <img src="${registrantAvatar}" class="w-6 h-6 rounded-full shadow-sm">
-                            <span class="text-xs font-semibold text-slate-700 truncate w-16">${escapeHTML(registrantName)}</span>
-                        </div>
+                        <p class="text-sm text-slate-700 font-medium">${escapeHTML(lastContactDateStr)}</p>
                     </td>
                     <td class="p-4">
-                        <a href="${detailUrl}" class="inline-flex items-center text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition">
-                            詳細を見る<i class="fas fa-chevron-right ml-1"></i>
-                        </a>
+                        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">${escapeHTML(lastContactTriggerStr)}</span>
                     </td>
                 `;
                 pcTableBody.appendChild(tr);
@@ -155,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (mobileCardList) {
                 const el = document.createElement('a');
                 el.href = detailUrl;
-                el.className = "block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative pb-10";
+                el.className = "block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative pb-12";
                 el.innerHTML = `
                     <div class="h-24 bg-slate-100 overflow-hidden border-b border-slate-100">
                         <img src="${escapeHTML(imgSrc)}" alt="名刺画像" class="w-full h-full object-cover opacity-80">
@@ -166,11 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="text-[10px] text-slate-500 truncate mt-1">${escapeHTML([card.department, card.position].filter(Boolean).join(' ') || '部署未登録')}</p>
                     </div>
                     <div class="absolute bottom-0 left-0 w-full bg-slate-50 border-t border-slate-100 px-3 py-2 flex items-center justify-between">
-                        <span class="text-[10px] text-slate-500 font-medium">登録者:</span>
-                        <div class="flex items-center gap-1.5">
-                            <img src="${registrantAvatar}" class="w-4 h-4 rounded-full">
-                            <span class="text-[10px] font-bold text-slate-700">${escapeHTML(registrantName)}</span>
-                        </div>
+                        <span class="text-[10px] text-slate-500 font-medium">最終連絡: ${escapeHTML(lastContactDateStr)}</span>
                     </div>
                 `;
                 mobileCardList.appendChild(el);
@@ -192,83 +214,102 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!allCards.length) return;
 
         const keyword = searchKeyword ? searchKeyword.value.toLowerCase() : '';
+        
+        // カスタム項目の検索条件を取得
+        const customFilters = {};
+        const customInputs = document.querySelectorAll('.custom-search-input');
+        customInputs.forEach(input => {
+            const val = input.value.trim().toLowerCase();
+            if (val) {
+                customFilters[input.dataset.key] = val;
+            }
+        });
 
         currentFilteredCards = allCards.filter(card => {
+            // 1. キーワード検索（OR条件）
             const matchKeyword = !keyword || 
                 (card.name && card.name.toLowerCase().includes(keyword)) ||
                 (card.companyName && card.companyName.toLowerCase().includes(keyword)) ||
                 (card.department && card.department.toLowerCase().includes(keyword));
             
-            return matchKeyword;
+            if (!matchKeyword) return false;
+
+            // 2. カスタム項目検索（AND条件）
+            let matchCustom = true;
+            for (const key in customFilters) {
+                const searchVal = customFilters[key];
+                const cardVal = (card.customFields && card.customFields[key]) ? String(card.customFields[key]).toLowerCase() : '';
+                if (!cardVal.includes(searchVal)) {
+                    matchCustom = false;
+                    break;
+                }
+            }
+
+            return matchCustom;
         });
 
+        displayedCount = 0;
         if (pcTableBody) pcTableBody.innerHTML = '';
         if (mobileCardList) mobileCardList.innerHTML = '';
-        displayedCount = 0;
+        
         loadMoreCards();
+        setupIntersectionObserver();
     }
 
-    // CSVエクスポート実行（単体テスト済みのモジュールを呼び出す）
-    async function exportCsv() {
-        // 画面の見た目だけでなく、フィルタ条件に合致する「全件（未ロード分含む）」を出力
-        const targetData = currentFilteredCards && currentFilteredCards.length > 0 ? currentFilteredCards : allCards;
+    if (searchButton) {
+        searchButton.addEventListener('click', performSearch);
+    }
+    if (searchKeyword) {
+        searchKeyword.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+    }
 
-        if (!targetData || targetData.length === 0) {
+    // CSVエクスポート
+    function exportCsv() {
+        if (!currentFilteredCards.length) {
             alert("エクスポートするデータがありません。");
             return;
         }
+        
+        // ヘッダー作成（基本項目＋カスタム項目）
+        let headers = ["ID", "会社名", "氏名", "部署", "役職", "メールアドレス", "電話番号(会社)", "電話番号(携帯)", "登録日時", "最終連絡日時", "連絡のきっかけ"];
+        customFieldDefinitions.forEach(f => headers.push(f.label));
 
-        try {
-            // テスト済みの共通ロジックを動的インポート
-            const { generateCsvString } = await import('./utils/csvExporter.js');
-            
-            // csvExporter.js が期待するフォーマット（氏名, 会社, 部署, 電話, メール, 登録日）にデータを変換
-            const mappedData = targetData.map(card => {
-                let createdAtStr = "";
-                if (card.createdAt && card.createdAt.toMillis) {
-                    createdAtStr = new Date(card.createdAt.toMillis()).toISOString();
-                } else if (card.createdAt) {
-                    createdAtStr = card.createdAt;
-                }
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF" + headers.join(",") + "\r\n";
+        
+        currentFilteredCards.forEach(card => {
+            const row = [
+                card.id || '',
+                card.companyName || '',
+                card.name || '',
+                card.department || '',
+                card.position || '',
+                card.email || '',
+                card.companyPhone || '',
+                card.mobilePhone || '',
+                card.createdAt ? new Date(card.createdAt.seconds * 1000).toLocaleString() : '',
+                card.lastContactDate || '',
+                card.lastContactTrigger || ''
+            ].map(val => `"${String(val).replace(/"/g, '""')}"`);
 
-                return {
-                    name: card.name,
-                    company: card.companyName,
-                    department: [card.department, card.position].filter(Boolean).join(' '),
-                    phone: card.companyPhone || card.mobilePhone || card.fax,
-                    email: card.email,
-                    createdAt: createdAtStr
-                };
+            customFieldDefinitions.forEach(f => {
+                const val = (card.customFields && card.customFields[f.key]) ? card.customFields[f.key] : '';
+                row.push(`"${String(val).replace(/"/g, '""')}"`);
             });
 
-            // 文字列変換 (サニタイズ処理、BOM付与、ヘッダー固定化が自動で行われる)
-            const csvContent = generateCsvString(mappedData);
-            
-            // ダウンロード処理
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            const dateStr = new Date().toISOString().slice(0, 10);
-            a.download = `bizknot_cards_${dateStr}.csv`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            
-        } catch (error) {
-            console.error("CSVエクスポートに失敗しました:", error);
-            alert("CSVの生成中にエラーが発生しました。");
-        }
+            csvContent += row.join(",") + "\r\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `bizknot_export_${new Date().getTime()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
-    // イベントバインド
     if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportCsv);
     if (exportCsvBtnMobile) exportCsvBtnMobile.addEventListener('click', exportCsv);
-
-    if (searchButton) searchButton.addEventListener('click', performSearch);
-    
-    if (searchKeyword) {
-        searchKeyword.addEventListener('keydown', (e) => { 
-            if(e.key === 'Enter') performSearch(); 
-        });
-    }
 });

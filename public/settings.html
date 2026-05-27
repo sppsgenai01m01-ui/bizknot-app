@@ -27,13 +27,21 @@
     <main id="settings-container" class="p-4 md:p-8">
 
         <!-- (タブ部分は変更なし) -->
-        <div class="mb-8">
-            <!-- ... -->
+        <!-- タブナビゲーション追加 -->
+        <div class="mb-8 border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button id="tab-custom-fields" class="border-blue-500 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    カスタム項目設定
+                </button>
+                <button id="tab-ai-settings" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    AIアプローチ設定
+                </button>
+            </nav>
         </div>
 
         <div>
-            <!-- (ユーザー管理タブの中身は変更なし) -->
-            <div id="content-user-management">
+            <!-- (ユーザー管理は省略されているのでそのまま) -->
+            <div id="content-user-management" class="hidden">
                 <!-- ... -->
             </div>
 
@@ -60,10 +68,64 @@
                     </table>
                 </div>
             </div>
+            <!-- ▼▼ AIアプローチ設定タブ ▼▼ -->
+            <div id="content-ai-settings" class="hidden">
+                <div class="mb-8 bg-white shadow rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">アプローチアラート期間設定</h3>
+                    <p class="text-sm text-gray-500 mb-4">名刺登録日、または最後にAIアプローチを作成した日から何ヶ月経過したらアラートを上げるかを設定します。（1〜60ヶ月）</p>
+                    <div class="flex items-center space-x-4">
+                        <input type="number" id="alert-period-input" min="1" max="60" class="p-2 border border-gray-300 rounded-md w-24">
+                        <span class="text-sm text-gray-700">ヶ月</span>
+                        <button id="save-alert-period-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">保存</button>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900">AIプロンプト（指示文）設定</h3>
+                            <p class="text-sm text-gray-500">名刺詳細画面でAIにメールを作成させる際に選べる「デフォルトのプロンプト」を複数登録できます。</p>
+                        </div>
+                        <button id="add-prompt-btn" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">+ プロンプト追加</button>
+                    </div>
+                    <ul id="prompt-list" class="divide-y divide-gray-200">
+                        <!-- JSで動的に追加 -->
+                    </ul>
+                </div>
+            </div>
+
         </div>
     </main>
 
     <!-- (ユーザー管理関連のモーダルは変更なし) -->
+
+    <!-- AIプロンプト追加/編集モーダル -->
+    <div id="ai-prompt-modal" class="fixed z-30 inset-0 overflow-y-auto hidden">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true"><div class="absolute inset-0 bg-gray-500 opacity-75"></div></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 id="prompt-modal-title" class="text-lg leading-6 font-medium text-gray-900">AIプロンプトの追加</h3>
+                    <input type="hidden" id="edit-prompt-id">
+                    <div class="mt-4 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">タイトル（管理用）</label>
+                            <input type="text" id="prompt-title" placeholder="例: 丁寧な営業メール（初回）" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">プロンプト内容</label>
+                            <textarea id="prompt-text" rows="6" placeholder="以下の情報を元に、丁寧なトーンで営業メールを作成してください。" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button id="save-prompt-btn" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 sm:ml-3 sm:w-auto sm:text-sm">保存</button>
+                    <button id="cancel-prompt-btn" type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm">キャンセル</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- ▼▼ カスタム項目追加/編集モーダル ▼▼ -->
     <div id="add-field-modal" class="fixed z-30 inset-0 overflow-y-auto hidden">

@@ -18,15 +18,15 @@ test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
     await page.goto('/business_card_form.html');
 
     // ヘッダータイトルの確認
-    await expect(page.locator('h1').first()).toContainText('名刺登録（手動入力）');
+    await expect(page.locator('h2').first()).toContainText('名刺情報入力');
 
     // フォームへの入力シミュレーション
     await page.fill('#company', '株式会社テストUI');
     await page.fill('#department', '開発部');
-    await page.fill('#position', 'エンジニア');
+    await page.fill('#title', 'エンジニア');
     await page.fill('#name', '自動 テスト');
     await page.fill('#email', 'test@example.com');
-    await page.fill('#companyPhone', '03-1234-5678');
+    await page.fill('#company_tel', '03-1234-5678');
 
     await expect(page.locator('#company')).toHaveValue('株式会社テストUI');
 

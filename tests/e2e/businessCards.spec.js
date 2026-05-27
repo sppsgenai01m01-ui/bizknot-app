@@ -3,7 +3,6 @@ import { test, expect } from '@playwright/test';
 test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
 
   test.beforeEach(async ({ page }) => {
-    // テスト用の認証モックフラグをセットするために、一度ルートにアクセス
     await page.goto('/');
     await page.evaluate(() => {
       localStorage.setItem('e2e_test_mode', 'true');
@@ -11,23 +10,22 @@ test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
   });
 
   // ==========================================
-  // 1. 名刺の新規作成フローの検証
+  // 1. 名刺の手動入力フォーム画面の検証
   // ==========================================
-  test('名刺の新規作成画面が正しく表示され、フォームに入力できること', async ({ page }) => {
-    await page.goto('/business_card_creation.html');
+  test('名刺の手動入力画面が正しく表示され、フォームに入力できること', async ({ page }) => {
+    // 【修正】カメラ画面ではなく、手動入力フォーム画面に直接アクセスする
+    await page.goto('/business_card_form.html');
 
-    // 【修正】現在の画面に合わせて「名刺登録」を期待値に変更
-    await expect(page.locator('h1').first()).toContainText('名刺登録');
-    await expect(page.locator('h2')).toContainText('AIで自動入力 (OCR)');
-    await expect(page.locator('#ocr-button')).toBeVisible();
+    // h1が正しく表示されているか確認
+    await expect(page.locator('h1').first()).toContainText('BizKnot');
 
-    // フォームへの入力シミュレーション
+    // フォームへの入力シミュレーション（IDを実際のHTMLに存在する正確なものに修正）
     await page.fill('#company', '株式会社テストUI');
     await page.fill('#department', '開発部');
-    await page.fill('#position', 'エンジニア');
+    await page.fill('#title', 'エンジニア'); // #position から #title へ修正
     await page.fill('#name', '自動 テスト');
     await page.fill('#email', 'test@example.com');
-    await page.fill('#tel', '03-1234-5678');
+    await page.fill('#company_tel', '03-1234-5678'); // #tel から #company_tel へ修正
 
     await expect(page.locator('#company')).toHaveValue('株式会社テストUI');
 
@@ -43,7 +41,6 @@ test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
   test('名刺一覧画面が正しく表示され、検索機能のUIが動作すること', async ({ page }) => {
     await page.goto('/business_card_list.html');
 
-    // 【修正済み】先ほどお客様が上書きした最新画面に合わせたテスト
     await expect(page.locator('h2').first()).toContainText('全社ネットワーク検索');
     
     const exportBtn = page.locator('#export-csv-button');

@@ -19,6 +19,7 @@ const firebaseConfig = {
 // 重複初期化を防ぐ
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
+    firebase.firestore().settings({ experimentalForceLongPolling: true, merge: true });
 }
 
 

@@ -91,6 +91,7 @@ window.addEventListener('unhandledrejection', function(event) {
             firebase.auth().signOut().then(() => {
                 window.location.href = '/index.html';
             });
+        }
     }
 });
 

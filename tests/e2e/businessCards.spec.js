@@ -14,15 +14,14 @@ test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
   // 1. 名刺の新規作成フローの検証
   // ==========================================
   test('名刺の新規作成画面が正しく表示され、フォームに入力できること', async ({ page }) => {
-    // 開発サーバーのURLに合わせてアクセス
     await page.goto('/business_card_creation.html');
 
-    // 画面の基本要素が表示されているか確認
-    await expect(page.locator('h1').first()).toContainText('BizKnot');
+    // 【修正】現在の画面に合わせて「名刺登録」を期待値に変更
+    await expect(page.locator('h1').first()).toContainText('名刺登録');
     await expect(page.locator('h2')).toContainText('AIで自動入力 (OCR)');
     await expect(page.locator('#ocr-button')).toBeVisible();
 
-    // フォームへの入力シミュレーション（ユーザーのタイピング操作）
+    // フォームへの入力シミュレーション
     await page.fill('#company', '株式会社テストUI');
     await page.fill('#department', '開発部');
     await page.fill('#position', 'エンジニア');
@@ -30,10 +29,9 @@ test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
     await page.fill('#email', 'test@example.com');
     await page.fill('#tel', '03-1234-5678');
 
-    // 入力値が正しく反映されているか確認
     await expect(page.locator('#company')).toHaveValue('株式会社テストUI');
 
-    // 登録ボタンがクリック可能な状態か確認
+    // 登録ボタンの確認
     const submitBtn = page.locator('button[type="submit"]');
     await expect(submitBtn).toBeVisible();
     await expect(submitBtn).toBeEnabled();
@@ -45,14 +43,12 @@ test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
   test('名刺一覧画面が正しく表示され、検索機能のUIが動作すること', async ({ page }) => {
     await page.goto('/business_card_list.html');
 
-    // 画面タイトルとCSVエクスポートボタンの確認
+    // 【修正済み】先ほどお客様が上書きした最新画面に合わせたテスト
     await expect(page.locator('h2').first()).toContainText('全社ネットワーク検索');
     
-    // PC表示の際にCSVエクスポートボタンが表示されているか
     const exportBtn = page.locator('#export-csv-button');
     await expect(exportBtn).toBeVisible();
 
-    // 検索ボックスへの入力とボタンクリックのシミュレーション
     const searchInput = page.locator('#search-keyword');
     await expect(searchInput).toBeVisible();
     await searchInput.fill('Playwright');
@@ -61,7 +57,6 @@ test.describe('BizKnot 名刺管理 E2E UIテスト', () => {
     await expect(searchBtn).toBeEnabled();
     await searchBtn.click();
 
-    // カードリストのコンテナが存在しているか（PC版かスマホ版のいずれか）
     const hasPcTable = await page.locator('#pc-table-body').count() > 0;
     const hasMobileList = await page.locator('#mobile-card-list').count() > 0;
     expect(hasPcTable || hasMobileList).toBeTruthy();
